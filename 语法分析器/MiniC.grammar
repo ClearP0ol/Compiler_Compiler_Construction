@@ -1,0 +1,70 @@
+# 类C语法规则（SLR(1)分析）
+
+# 语法名称
+GRAMMAR_NAME MiniC
+
+# 开始符号
+START_SYMBOL Program
+
+# 程序，由语句列表组成
+Program -> StmtList
+
+# 语句列表，可以是一个或多个语句
+StmtList -> Stmt
+StmtList -> Stmt StmtList
+
+# 表达式语句、选择语句、循环语句、返回语句、复合语句、赋值语句
+Stmt -> ExprStatement
+Stmt -> SelectionStatement
+Stmt -> IterationStatement
+Stmt -> ReturnStatement
+Stmt -> CompoundStatement
+Stmt -> AssignmentStatement
+
+# 有表达式的语句、空语句
+ExprStatement -> Expr ';'
+ExprStatement -> ';'
+
+# 选择语句
+SelectionStatement -> 'if' '(' RelExpr ')' Stmt
+
+# 循环语句
+IterationStatement -> 'while' '(' RelExpr ')' Stmt
+
+# 赋值语句
+AssignmentStatement -> 'id' '=' Expr ';'
+
+# 无值返回与带值返回
+ReturnStatement -> 'return' ';'
+ReturnStatement -> 'return' Expr ';'
+
+# 空代码块与带值代码块
+CompoundStatement -> '{' '}'
+CompoundStatement -> '{' StmtList '}'
+
+# 关系表达式，支持比较运算
+RelExpr -> Expr RelOp Expr
+RelExpr -> Expr
+
+# 关系运算符
+RelOp -> '<'
+RelOp -> '>'
+RelOp -> '<='
+RelOp -> '>='
+RelOp -> '=='
+RelOp -> '!='
+
+# 表达式，加法减法与基础项
+Expr -> Expr '+' Term
+Expr -> Expr '-' Term
+Expr -> Term
+
+# 项，乘法、除法与基础因子
+Term -> Term '*' Factor
+Term -> Term '/' Factor
+Term -> Factor
+
+# 变量名、数字常量、括号表达式
+Factor -> 'id'
+Factor -> 'num'
+Factor -> '(' Expr ')'
