@@ -1,4 +1,4 @@
-#include "GrammarLoader.hpp"
+#include "FirstFollowCalculator.hpp"
 #include <iostream>
 
 using namespace std;
@@ -24,5 +24,18 @@ int main() {
     cout << endl << "文法加载成功！" << endl;
 
    
+    // 创建FIRST/FOLLOW计算器
+    cout << "\n计算FIRST和FOLLOW集合。" << endl;
+    FirstFollowCalculator Calculator(Grammar);
+
+    // 计算FIRST和FOLLOW集合
+    Calculator.Calculate();
+
+    // 打印FIRST集合
+    Calculator.PrintFirstSets();
+
+    // 打印FOLLOW集合
+    Calculator.PrintFollowSets();
+
     return 0;
 }
