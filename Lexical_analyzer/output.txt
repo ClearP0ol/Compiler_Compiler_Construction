@@ -12,14 +12,14 @@ WHILE : while
 LPAREN : (
 ID : i
 LT : <
-NUM : 10
+NUM : 1023
 RPAREN : )
 LBRACE : {
 ID : i
 ASSIGN : =
 ID : i
 PLUS : +
-NUM : 1
+NUM : 23
 SEMI : ;
 RBRACE : }
 RETURN : return
