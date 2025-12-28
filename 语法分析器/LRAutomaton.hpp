@@ -11,20 +11,23 @@ using namespace std;
 struct LRState {
     int StateId;                           // 状态编号
     set<LRItem> Items;                     // 项目集
-    map<GrammarSymbol, int> Transitions;   // GOTO函数：符号 -> 下一状态
+    map<string, int> Transitions;          // GOTO函数：符号 -> 下一状态
 
     // 构造函数
     LRState() : StateId(-1) {}
     LRState(int Id, const set<LRItem>& Items) : StateId(Id), Items(Items) {}
 
     // 添加转移
-    void AddTransition(const GrammarSymbol& Symbol, int NextStateId) {
-        Transitions[Symbol] = NextStateId;
+    void AddTransition(const string& SymbolName, int NextStateId) {
+        if (NextStateId < 0) {
+            throw invalid_argument("无效的下一状态ID: " + to_string(NextStateId));
+        }
+        Transitions[SymbolName] = NextStateId;
     }
 
     // 获取转移状态
-    int GetTransition(const GrammarSymbol& Symbol) const {
-        auto It = Transitions.find(Symbol);
+    int GetTransition(const string& SymbolName) const {
+        auto It = Transitions.find(SymbolName);
         if (It != Transitions.end()) {
             return It->second;
         }
@@ -44,7 +47,7 @@ struct LRState {
         if (!Transitions.empty()) {
             cout << "  转移:" << endl;
             for (const auto& Trans : Transitions) {
-                cout << "    在 " << Trans.first.Name << " 上转到状态 " << Trans.second << endl;
+                cout << "    在 " << Trans.first << " 上转到状态 " << Trans.second << endl;
             }
         }
 
@@ -92,23 +95,21 @@ struct LRAutomatonBuilder {
             int CurrentStateId = StateQueue.front();
             StateQueue.pop();
 
-            LRState& CurrentState = States[CurrentStateId];
-
             // 收集所有可能的转移符号（圆点后的符号）
-            map<GrammarSymbol, set<LRItem>> SymbolTransitions;
+            map<string, set<LRItem>> SymbolTransitions;
 
-            for (const auto& Item : CurrentState.Items) {
+            for (const auto& Item : States[CurrentStateId].Items) {
                 const GrammarSymbol* NextSymbol = Item.GetSymbolAfterDot();
                 if (NextSymbol != nullptr) {
                     // 对于每个圆点后的符号，收集可转移的项目
                     LRItem NextItem = Item.GetNextItem();
-                    SymbolTransitions[*NextSymbol].insert(NextItem);
+                    SymbolTransitions[NextSymbol->Name].insert(NextItem);
                 }
             }
 
             // 对每个转移符号，计算闭包并创建新状态
             for (const auto& TransPair : SymbolTransitions) {
-                const GrammarSymbol& Symbol = TransPair.first;
+                const string& SymbolName = TransPair.first;
                 const set<LRItem>& KernelItems = TransPair.second;
 
                 // 计算闭包
@@ -123,7 +124,7 @@ struct LRAutomatonBuilder {
                 }
 
                 // 添加转移
-                CurrentState.AddTransition(Symbol, TargetStateId);
+                States[CurrentStateId].AddTransition(SymbolName, TargetStateId);
             }
         }
     }

@@ -25,13 +25,13 @@ struct GrammarSymbol {
 		return Name == other.Name && IsTerminal == other.IsTerminal;
 	}
 
-	// 重载<
+	// 便于map使用
 	bool operator<(const GrammarSymbol& other) const {
-		// 终结符在前，非终结符在后，各自按名称排序
-		if (IsTerminal != other.IsTerminal) {
-			return IsTerminal < other.IsTerminal;
+		// 先按名称排序，如果名称相同再按类型排序
+		if (Name != other.Name) {
+			return Name < other.Name;
 		}
-		return Name < other.Name;
+		return IsTerminal < other.IsTerminal;
 	}
 };
 
