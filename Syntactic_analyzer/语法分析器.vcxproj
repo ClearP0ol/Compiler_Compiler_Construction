@@ -125,6 +125,8 @@
   <ItemGroup>
     <ClInclude Include="FirstFollowCalculator.hpp" />
     <ClInclude Include="GrammarLoader.hpp" />
+    <ClInclude Include="LRAutomaton.hpp" />
+    <ClInclude Include="LRItem.hpp" />
     <ClInclude Include="Token.hpp" />
   </ItemGroup>
   <ItemGroup>
