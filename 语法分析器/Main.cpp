@@ -1,4 +1,3 @@
-// test_grammar_loader.cpp
 #include "GrammarLoader.hpp"
 #include <iostream>
 
