@@ -1,7 +1,9 @@
-int main() {
-    int i = 0;
-    while (i < 1023) {
-        i = i + 23;
-    }
-    return 0;
-}
+read x;
+read y;
+if ( x < y )
+    write x;
+else
+    write y;
+
+while ( x <= 10 )
+    x := x;

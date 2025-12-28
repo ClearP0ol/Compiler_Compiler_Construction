@@ -137,32 +137,32 @@ State* buildMasterNFA(
 }
 
 
-State* buildLexerNFA() {
+/*
+ * buildNFAFromRules
+ * =================
+ * 根据 RuleSet（来自 .lex）构造总 NFA
+ */
+State* buildNFAFromRules(const RuleSet& rules) {
     std::vector<std::pair<TokenType, RegexNode*>> specs;
 
-    // ===== 关键字（优先级最高）=====
-    specs.push_back({TokenType::INT,    buildKeyword("int")});
-    specs.push_back({TokenType::WHILE,  buildKeyword("while")});
-    specs.push_back({TokenType::RETURN, buildKeyword("return")});
+    for (const auto& rule : rules.rules) {
+        RegexNode* regex = nullptr;
 
-    // ===== 标识符 & 常量 =====
-    specs.push_back({TokenType::ID,  buildIDRegex()});
-    specs.push_back({TokenType::NUM, buildNUMRegex()});
+        // ===== 特殊模式 =====
+        if (rule.pattern == "{ID}") {
+            regex = buildIDRegex();
+        }
+        else if (rule.pattern == "{NUM}") {
+            regex = buildNUMRegex();
+        }
+        // ===== 关键字或字面量 =====
+        else {
+            // 对于 "if" "+" "==" 等
+            regex = buildKeyword(rule.pattern);
+        }
 
-    // ===== 运算符 =====
-    specs.push_back({TokenType::ASSIGN, new RegexNode(RegexType::CHAR, '=')});
-    specs.push_back({TokenType::PLUS,   new RegexNode(RegexType::CHAR, '+')});
-    specs.push_back({TokenType::MINUS,  new RegexNode(RegexType::CHAR, '-')});
-    specs.push_back({TokenType::MULT,    new RegexNode(RegexType::CHAR, '*')});
-    specs.push_back({TokenType::DIV,    new RegexNode(RegexType::CHAR, '/')});
-    specs.push_back({TokenType::LT,     new RegexNode(RegexType::CHAR, '<')});
-
-    // ===== 界符 =====
-    specs.push_back({TokenType::LPAREN,        new RegexNode(RegexType::CHAR, '(')});
-    specs.push_back({TokenType::RPAREN,        new RegexNode(RegexType::CHAR, ')')});
-    specs.push_back({TokenType::LBRACE,    new RegexNode(RegexType::CHAR, '{')});
-    specs.push_back({TokenType::RBRACE,    new RegexNode(RegexType::CHAR, '}')});
-    specs.push_back({TokenType::SEMI,new RegexNode(RegexType::CHAR, ';')});
+        specs.push_back({rule.type, regex});
+    }
 
     return buildMasterNFA(specs);
 }
