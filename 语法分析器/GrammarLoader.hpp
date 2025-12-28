@@ -10,7 +10,7 @@
 
 using namespace std;
 
-// 文法符号（终结符或非终结符）
+// 语法符号（终结符或非终结符）
 struct GrammarSymbol {
 	string Name; // 符号名
 	bool IsTerminal; // 是否为终结符
@@ -64,9 +64,9 @@ struct Production {
 	}
 };
 
-// 文法定义
+// 语法定义
 struct GrammarDefinition {
-	string Name;                          // 文法名称
+	string Name;                          // 语法名称
 	GrammarSymbol StartSymbol;            // 开始符号
 	vector<GrammarSymbol> Terminals;      // 终结符集合
 	vector<GrammarSymbol> NonTerminals;   // 非终结符集合
@@ -120,11 +120,11 @@ struct GrammarDefinition {
 	}
 };
 
-// 文法文件加载器
+// 语法文件加载器
 struct GrammarLoader {
 	GrammarLoader() = default;
 
-	// 从文件加载文法
+	// 从文件加载语法
 	GrammarDefinition LoadFromFile(const string& filePath) {
 
 		GrammarDefinition Grammar;
@@ -137,11 +137,11 @@ struct GrammarLoader {
 		ifstream File(filePath);
 
 		if (!File.is_open()) {
-			cout << "文法文件打开失败：" << filePath << endl;
+			cout << "语法文件打开失败：" << filePath << endl;
 			return Grammar;
 		}
 
-		cout << "正在加载文法文件: " << filePath << endl;
+		cout << "正在加载语法文件: " << filePath << endl;
 
 		string Line; // 按行读取
 		int LineNum = 0; // 行计数
@@ -158,10 +158,9 @@ struct GrammarLoader {
 			// 转换为小写处理关键词
 			string LineLower = ToLower(Line);
 
-			// 解析文法名称
+			// 解析语法名称
 			if (LineLower.find("grammar_name") == 0) {
 				Grammar.Name = ExtractValue(Line);
-				cout << "文法名称: " << Grammar.Name << endl;
 				continue;
 			}
 
@@ -169,7 +168,6 @@ struct GrammarLoader {
 			if (LineLower.find("start_symbol") == 0) {
 				string StartSymbol = ExtractValue(Line);
 				Grammar.StartSymbol = GrammarSymbol(StartSymbol, false);
-				cout << "开始符号: " << StartSymbol << endl;
 				continue;
 			}
 
@@ -391,10 +389,10 @@ struct GrammarLoader {
 		}
 	}
 
-	// 打印文法摘要
+	// 打印语法摘要
 	void PrintGrammarSummary(const GrammarDefinition& grammar) {
-		cout << endl << "文法加载完成。" << endl;
-		cout << "文法名称: " << grammar.Name << endl;
+		cout << endl << "语法加载完成。" << endl;
+		cout << "语法名称: " << grammar.Name << endl;
 		cout << "开始符号: " << grammar.StartSymbol.Name << endl;
 		cout << "非终结符 (" << grammar.NonTerminals.size() << " 个): ";
 		for (const auto& nt : grammar.NonTerminals) {
@@ -407,9 +405,8 @@ struct GrammarLoader {
 		cout << endl << "产生式 (" << grammar.Productions.size() << " 个):" << endl;
 
 		for (size_t i = 0; i < grammar.Productions.size(); i++) {
-			cout << "  [" << i << "] " << grammar.Productions[i].ToString() << endl;
+			cout << "[" << i << "] " << grammar.Productions[i].ToString() << endl;
 		}
-		cout << endl;
 	}
 };
 
