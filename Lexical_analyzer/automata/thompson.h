@@ -3,6 +3,9 @@
 #include "regex_ast.h"
 #include "nfa.h"
 #include "token.h"
+#include "lexer_rule.h"   // 为 RuleSet
+
+State* buildNFAFromRules(const RuleSet& rules);
 
 /*
  * buildNFA
@@ -30,7 +33,6 @@ RegexNode* buildIDRegex();
 // 整数常量：NUM = [0-9]+
 RegexNode* buildNUMRegex();
 
-State* buildLexerNFA();
 
 
 /*

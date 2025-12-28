@@ -102,7 +102,12 @@ void Lexer::advance() {
  * 跳过空白字符（空格 / 制表 / 换行）
  */
 void Lexer::skipWhitespace() {
-    while (pos < src.size() && isWhitespace(src[pos])) {
-        advance();
+    while (pos < src.size()) {
+        unsigned char c = (unsigned char)src[pos];
+        if (isBlank(c) || isNewline(c)) {
+            advance();
+        } else {
+            break;
+        }
     }
 }
