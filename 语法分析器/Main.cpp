@@ -21,7 +21,6 @@ int main() {
     }
 
     cout << endl << "语法加载成功！" << endl;
-
    
     // 创建FIRST/FOLLOW计算器
     cout << "\n计算FIRST和FOLLOW集合。" << endl;
