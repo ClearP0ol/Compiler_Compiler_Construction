@@ -1,0 +1,7 @@
+int main() {
+    int i = 0;
+    while (i < 1023) {
+        i = i + 23;
+    }
+    return 0;
+}
