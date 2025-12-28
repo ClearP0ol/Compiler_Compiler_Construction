@@ -2,8 +2,8 @@
 #ifndef TOKEN_HPP
 #define TOKEN_HPP
 
-#include <string>
 #include <optional>
+#include <string>
 
 enum class TokenType {
 	// 控制与结束
