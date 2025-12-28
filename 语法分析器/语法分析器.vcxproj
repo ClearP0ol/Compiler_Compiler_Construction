@@ -123,6 +123,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="FirstFollowCalculator.hpp" />
     <ClInclude Include="GrammarLoader.hpp" />
     <ClInclude Include="Token.hpp" />
   </ItemGroup>
