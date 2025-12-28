@@ -1,6 +1,6 @@
 # 类C语法规则（SLR(1)分析）
 
-# 文法名称
+# 语法名称
 GRAMMAR_NAME MiniC
 
 # 开始符号
