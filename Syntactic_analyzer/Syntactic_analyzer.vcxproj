@@ -130,8 +130,9 @@
     <ClInclude Include="GrammarLoader.hpp" />
     <ClInclude Include="LRAutomaton.hpp" />
     <ClInclude Include="LRItem.hpp" />
+    <ClInclude Include="ShiftReduceParser.hpp" />
     <ClInclude Include="SLRAnalysisTable.hpp" />
-    <ClInclude Include="token.hpp" />
+    <ClInclude Include="Token.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ExprTokensOutput.txt" />

@@ -14,24 +14,30 @@ using namespace std;
 struct GrammarSymbol {
 	string Name; // 符号名
 	bool IsTerminal; // 是否为终结符
+	string TokenType; // Token类型（如ID、NUM、PLUS等）
 
-	// 空构造函数
-	GrammarSymbol(const string& name = "", bool isTerminal = false)
-		: Name(name), IsTerminal(isTerminal) {
+	// 构造函数
+	GrammarSymbol(const string& name = "", bool isTerminal = false, const string& tokenType = "")
+		: Name(name), IsTerminal(isTerminal), TokenType(tokenType) {
 	}
 
-	// 重载++
+	// 重载==运算符
 	bool operator==(const GrammarSymbol& other) const {
 		return Name == other.Name && IsTerminal == other.IsTerminal;
 	}
 
-	// 便于map使用
+	// 便于map使用的<运算符
 	bool operator<(const GrammarSymbol& other) const {
 		// 先按名称排序，如果名称相同再按类型排序
 		if (Name != other.Name) {
 			return Name < other.Name;
 		}
 		return IsTerminal < other.IsTerminal;
+	}
+
+	// 重载!=运算符
+	bool operator!=(const GrammarSymbol& other) const {
+		return !(*this == other);
 	}
 };
 

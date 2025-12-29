@@ -41,10 +41,13 @@
     <ClInclude Include="LRItem.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="token.hpp">
+    <ClInclude Include="Token.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="SLRAnalysisTable.hpp">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="ShiftReduceParser.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

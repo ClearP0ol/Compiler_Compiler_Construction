@@ -2,14 +2,14 @@
 #define SLRANALYSISTABLE_HPP
 
 
+#include "FirstFollowCalculator.hpp"
+#include "GrammarLoader.hpp"
+#include "LRAutomaton.hpp"
+#include "LRItem.hpp"
+#include <iostream>
 #include <map>
 #include <set>
 #include <string>
-#include <iostream>
-#include "GrammarLoader.hpp"
-#include "LRItem.hpp"
-#include "LRAutomaton.hpp"
-#include "FirstFollowCalculator.hpp"
 
 using namespace std;
 
@@ -33,15 +33,16 @@ struct SLRAction {
 
 	// 转换为字符串
 	string ToString() const {
-		switch (Type) {
-		case SLRActionType::SHIFT:
+		if (Type == SLRActionType::SHIFT) {
 			return "S" + to_string(StateOrProduction);
-		case SLRActionType::REDUCE:
+		}
+		else if (Type == SLRActionType::REDUCE) {
 			return "R" + to_string(StateOrProduction);
-		case SLRActionType::ACCEPT:
+		}
+		else if (Type == SLRActionType::ACCEPT) {
 			return "ACC";
-		case SLRActionType::ERROR:
-		default:
+		}
+		else {
 			return "-";
 		}
 	}
@@ -81,10 +82,9 @@ struct SLRAnalysisTableBuilder {
 			// 遍历状态中的所有项目
 			for (const LRItem& Item : State.Items) {
 				// 如果是接受项目
-				if (Item.IsAcceptItem(Grammar.StartSymbol)) {
+				if (Item.IsAcceptItem(AutomatonBuilder.OriginalGrammar.StartSymbol)) {
 					// 在ACTION表中为该状态和$符号添加ACCEPT动作
-					ActionTable[{State.StateId, FFCalculator.EndSymbol}] =
-						SLRAction(SLRActionType::ACCEPT);
+					ActionTable[{State.StateId, FFCalculator.EndSymbol}] = SLRAction(SLRActionType::ACCEPT);
 				}
 				// 如果是规约项目
 				else if (Item.IsReduceItem()) {
