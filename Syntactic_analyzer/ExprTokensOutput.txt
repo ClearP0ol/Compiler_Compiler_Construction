@@ -1,20 +1,20 @@
-LPAREN : (
-LPAREN : (
-NUM : 12
-PLUS : +
-NUM : 34
-RPAREN : )
-MULT : *
-NUM : 5
-MINUS : -
-NUM : 6
-RPAREN : )
-DIV : /
-LPAREN : (
-NUM : 7
-MINUS : -
-NUM : 8
-MULT : *
-NUM : 9
-RPAREN : )
-ENDFILE
+LPAREN : ( (1,1)
+LPAREN : ( (1,2)
+NUM : 12 (1,3)
+PLUS : + (1,5)
+NUM : 34 (1,6)
+RPAREN : ) (1,8)
+MULT : * (1,9)
+NUM : 5 (1,10)
+MINUS : - (1,11)
+NUM : 6 (1,12)
+RPAREN : ) (1,13)
+DIV : / (1,14)
+LPAREN : ( (1,15)
+NUM : 7 (1,16)
+MINUS : - (1,17)
+NUM : 8 (1,18)
+MULT : * (1,19)
+NUM : 9 (1,20)
+RPAREN : ) (1,21)
+ENDFILE (2,1)

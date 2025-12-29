@@ -139,7 +139,9 @@
     <Text Include="TinyTokensOutput.txt" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="Expr.grammar" />
     <None Include="MiniC.grammar" />
+    <None Include="Tiny.grammar" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
