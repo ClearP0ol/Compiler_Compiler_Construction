@@ -1,5 +1,6 @@
 #include "FirstFollowCalculator.hpp"
 #include "LRAutomaton.hpp"
+#include "SLRAnalysisTable.hpp"
 #include <iostream>
 
 using namespace std;
@@ -47,14 +48,28 @@ int main() {
         cout << "自动机状态数量: " << AutomatonBuilder.States.size() << endl;
 
         // 打印增广语法信息
-        cout << "增广语法开始符号: " << Grammar.StartSymbol.Name << "'" << endl;
+        cout << "增广语法开始符号: " << AutomatonBuilder.AugmentedGrammar.StartSymbol.Name << endl;
 
         // 打印所有状态
         AutomatonBuilder.PrintAutomaton();
 
+        // 测试SLR(1)分析表生成器
+        cout << "\n测试SLR(1)分析表生成器" << endl;
+        
+        // 为增广文法创建FIRST/FOLLOW计算器
+        FirstFollowCalculator AugmentedFF(AutomatonBuilder.AugmentedGrammar);
+        AugmentedFF.Calculate();
+        
+        // 创建SLR分析表生成器
+        SLRAnalysisTableBuilder SLRTable(AutomatonBuilder, AugmentedFF);
+        
+        // 打印分析表
+        cout << "SLR(1)分析表生成成功！" << endl;
+        SLRTable.PrintTable();
+
     }
     catch (const exception& e) {
-        cout << "LR(0)自动机构建失败: " << e.what() << endl;
+        cout << "错误: " << e.what() << endl;
         return 1;
     }
 
