@@ -13,6 +13,15 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\MiniC">
+      <UniqueIdentifier>{f6d10b65-90df-43fb-9b11-adda3bad5c97}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Expr">
+      <UniqueIdentifier>{cf4caba3-f590-483c-808c-bb30d805cbcb}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\Tiny">
+      <UniqueIdentifier>{2bd0aa64-9f91-4c08-afa9-c54008e7a0e5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Main.cpp">
@@ -40,19 +49,25 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <Text Include="ExprTokensOutput.txt">
-      <Filter>Source Files</Filter>
-    </Text>
     <Text Include="MiniCTokensOutput.txt">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\MiniC</Filter>
+    </Text>
+    <Text Include="ExprTokensOutput.txt">
+      <Filter>Source Files\Expr</Filter>
     </Text>
     <Text Include="TinyTokensOutput.txt">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\Tiny</Filter>
     </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="MiniC.grammar">
-      <Filter>Source Files</Filter>
+      <Filter>Source Files\MiniC</Filter>
+    </None>
+    <None Include="Expr.grammar">
+      <Filter>Source Files\Expr</Filter>
+    </None>
+    <None Include="Tiny.grammar">
+      <Filter>Source Files\Tiny</Filter>
     </None>
   </ItemGroup>
 </Project>
