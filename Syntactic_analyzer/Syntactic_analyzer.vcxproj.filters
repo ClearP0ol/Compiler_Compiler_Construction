@@ -58,6 +58,15 @@
     <Text Include="TinyTokensOutput.txt">
       <Filter>Source Files\Tiny</Filter>
     </Text>
+    <Text Include="TestExpr.txt">
+      <Filter>Source Files\Expr</Filter>
+    </Text>
+    <Text Include="TestMiniC.txt">
+      <Filter>Source Files\MiniC</Filter>
+    </Text>
+    <Text Include="TestTiny.txt">
+      <Filter>Source Files\Tiny</Filter>
+    </Text>
   </ItemGroup>
   <ItemGroup>
     <None Include="MiniC.grammar">

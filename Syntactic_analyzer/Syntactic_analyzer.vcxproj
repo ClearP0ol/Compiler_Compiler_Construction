@@ -136,6 +136,9 @@
   <ItemGroup>
     <Text Include="ExprTokensOutput.txt" />
     <Text Include="MiniCTokensOutput.txt" />
+    <Text Include="TestExpr.txt" />
+    <Text Include="TestMiniC.txt" />
+    <Text Include="TestTiny.txt" />
     <Text Include="TinyTokensOutput.txt" />
   </ItemGroup>
   <ItemGroup>
