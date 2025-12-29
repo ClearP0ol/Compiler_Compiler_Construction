@@ -9,25 +9,29 @@
 
 using namespace std;
 
-int main() {
+int main()
+{
 	// 创建语法加载器
 	GrammarLoader Loader;
 
 	// 测试文件路径
-	// string GrammarFile = "MiniC.grammar";  // 切换到MiniC语法文件
-	string GrammarFile = "Tiny.grammar";   // 切换到Tiny语法文件
+	string GrammarFile = "MiniC.grammar"; // 切换到MiniC语法文件
+	// string GrammarFile = "Tiny.grammar";   // 切换到Tiny语法文件
 	// string GrammarFile = "Expr.grammar";   // 切换到Expr语法文件
 
 	// 加载语法
 	GrammarDefinition Grammar = Loader.LoadFromFile(GrammarFile);
 
 	// 检查是否加载成功
-	if (Grammar.Productions.empty()) {
-		cout << endl << "语法加载失败！" << endl;
+	if (Grammar.Productions.empty())
+	{
+		cout << endl
+			 << "语法加载失败！" << endl;
 		return 1;
 	}
 
-	cout << endl << "语法加载成功！" << endl;
+	cout << endl
+		 << "语法加载成功！" << endl;
 
 	// 创建FIRST/FOLLOW计算器
 	cout << "\n计算FIRST和FOLLOW集合。" << endl;
@@ -45,7 +49,8 @@ int main() {
 	// 测试LR(0)自动机构建器
 	cout << "\n测试LR(0)自动机构建器" << endl;
 
-	try {
+	try
+	{
 		// 创建LR(0)自动机
 		LRAutomatonBuilder AutomatonBuilder(Grammar);
 
@@ -76,43 +81,51 @@ int main() {
 		// 测试移进-归约分析器
 		cout << "\n测试移进-归约分析器" << endl;
 
-		try {
+		try
+		{
 			// 创建分析器实例
-			ShiftReduceParser parser(SLRTable);
+			ShiftReduceParser Parser(SLRTable);
 
 			// 根据当前选择的语法文件读取相应的词法分析器输出文件
-			string tokenFile;
-			if (GrammarFile == "Expr.grammar") {
-				tokenFile = "ExprTokensOutput.txt";
+			string TokenFile;
+			if (GrammarFile == "Expr.grammar")
+			{
+				TokenFile = "ExprTokensOutput.txt";
 			}
-			else if (GrammarFile == "Tiny.grammar") {
-				tokenFile = "TinyTokensOutput.txt";
+			else if (GrammarFile == "Tiny.grammar")
+			{
+				TokenFile = "TinyTokensOutput.txt";
 			}
-			else if (GrammarFile == "MiniC.grammar") {
-				tokenFile = "MiniCTokensOutput.txt";
+			else if (GrammarFile == "MiniC.grammar")
+			{
+				TokenFile = "MiniCTokensOutput.txt";
 			}
-			else {
+			else
+			{
 				cout << "未知的语法文件" << endl;
 				return 1;
 			}
 
 			// 从文件解析
-			cout << "\n从文件中解析tokens: " << tokenFile << endl;
+			cout << "\n从文件中解析tokens: " << TokenFile << endl;
 
-			bool Success = parser.ParseFromFile(tokenFile);
-			if (Success) {
+			bool Success = Parser.ParseFromFile(TokenFile);
+			if (Success)
+			{
 				cout << "\n移进-归约分析成功！" << endl;
 			}
-			else {
+			else
+			{
 				cout << "\n移进-归约分析失败！" << endl;
 			}
 		}
-		catch (const exception& e) {
+		catch (const exception &e)
+		{
 			cout << "移进-归约分析测试错误: " << e.what() << endl;
 		}
-
 	}
-	catch (const exception& e) {
+	catch (const exception &e)
+	{
 		cout << "错误: " << e.what() << endl;
 		return 1;
 	}
