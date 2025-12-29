@@ -96,11 +96,11 @@ int main() {
 				return 1;
 			}
 
-			// 直接从文件解析
+			// 从文件解析
 			cout << "\n从文件中解析tokens: " << tokenFile << endl;
 
-			bool success = parser.ParseFromFile(tokenFile);
-			if (success) {
+			bool Success = parser.ParseFromFile(tokenFile);
+			if (Success) {
 				cout << "\n移进-归约分析成功！" << endl;
 			}
 			else {

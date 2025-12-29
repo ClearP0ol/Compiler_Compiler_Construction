@@ -2,7 +2,6 @@
 #ifndef TOKEN_HPP
 #define TOKEN_HPP
 
-#include <optional>
 #include <string>
 
 enum class TokenType {

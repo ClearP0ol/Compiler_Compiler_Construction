@@ -86,35 +86,8 @@ struct SLRAnalysisTableBuilder {
 					// 在ACTION表中为该状态和$符号添加ACCEPT动作
 					ActionTable[{State.StateId, FFCalculator.EndSymbol}] = SLRAction(SLRActionType::ACCEPT);
 				}
-				// 如果是规约项目
-				else if (Item.IsReduceItem()) {
-					// 遍历FOLLOW集，为每个终结符添加REDUCE动作
-					const Production& Prod = Item.ProductionRef;
-					const set<GrammarSymbol>& FollowSet =
-						FFCalculator.GetFollowSet(Prod.Left);
-
-					for (const GrammarSymbol& Term : FollowSet) {
-						// 如果该位置已有动作，检查是否有冲突
-						auto It = ActionTable.find({ State.StateId, Term });
-						SLRAction NewAction(SLRActionType::REDUCE, Prod.Id);
-						if (It != ActionTable.end()) {
-							// 只有当新动作与已有动作不同时，才报告冲突
-							if (It->second.Type != NewAction.Type || It->second.StateOrProduction != NewAction.StateOrProduction) {
-								cout << "警告：在状态 " << State.StateId
-									<< " 和符号 " << Term.Name
-									<< " 处发现冲突：现有动作 "
-									<< It->second.ToString()
-									<< "，新动作 " << NewAction.ToString() << endl;
-							}
-						}
-						else {
-							// 添加规约动作
-							ActionTable[{State.StateId, Term}] = NewAction;
-						}
-					}
-				}
 				// 如果是移进项目
-				else {
+				else if (!Item.IsReduceItem()) {
 					const GrammarSymbol* SymbolAfterDot = Item.GetSymbolAfterDot();
 					if (SymbolAfterDot != nullptr) {
 						// 如果是终结符，添加移进动作
@@ -135,11 +108,41 @@ struct SLRAnalysisTableBuilder {
 											<< "，新动作 " << NewAction.ToString() << endl;
 									}
 								}
-								else {
-									// 添加移进动作
-									ActionTable[{State.StateId, * SymbolAfterDot}] = NewAction;
-								}
+								// 添加移进动作（优先于规约）
+								ActionTable[{State.StateId, * SymbolAfterDot}] = NewAction;
 							}
+						}
+					}
+				}
+				// 如果是规约项目
+				else {
+					// 遍历FOLLOW集，为每个终结符添加REDUCE动作
+					const Production& Prod = Item.ProductionRef;
+					const set<GrammarSymbol>& FollowSet =
+						FFCalculator.GetFollowSet(Prod.Left);
+
+					for (const GrammarSymbol& Term : FollowSet) {
+						// 特殊处理：如果是else符号，不添加规约动作（优先移进）
+						if (Term.Name == "else") {
+							continue;
+						}
+
+						// 如果该位置已有动作，检查是否有冲突
+						auto It = ActionTable.find({ State.StateId, Term });
+						SLRAction NewAction(SLRActionType::REDUCE, Prod.Id);
+						if (It != ActionTable.end()) {
+							// 只有当新动作与已有动作不同时，才报告冲突
+							if (It->second.Type != NewAction.Type || It->second.StateOrProduction != NewAction.StateOrProduction) {
+								cout << "警告：在状态 " << State.StateId
+									<< " 和符号 " << Term.Name
+									<< " 处发现冲突：现有动作 "
+									<< It->second.ToString()
+									<< "，新动作 " << NewAction.ToString() << endl;
+							}
+						}
+						else {
+							// 添加规约动作
+							ActionTable[{State.StateId, Term}] = NewAction;
 						}
 					}
 				}

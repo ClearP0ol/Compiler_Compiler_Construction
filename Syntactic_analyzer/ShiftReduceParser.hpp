@@ -184,32 +184,32 @@ vector<GrammarSymbol> ShiftReduceParser::LoadTokensFromFile(const string& tokenF
 	}
 
 	while (getline(File, Line)) {
-		istringstream iss(Line);
-		string tokenType, colon, tempValue;
+		istringstream Iss(Line);
+		string TokenType, Colon, TempValue;
 
-		iss >> tokenType;
-		if (tokenType == "ENDFILE") {
+		Iss >> TokenType;
+		if (TokenType == "ENDFILE") {
 			// 跳过ENDFILE标记
 			continue;
 		}
 
-		iss >> colon; // 跳过冒号
+		Iss >> Colon; // 跳过冒号
 
 		// 获取token值（直到遇到左括号）
-		getline(iss, tempValue);
+		getline(Iss, TempValue);
 
 		// 去除前后空格
-		size_t start = tempValue.find_first_not_of(" ");
-		size_t end = tempValue.find_last_not_of(" ");
-		if (start != string::npos && end != string::npos) {
-			tempValue = tempValue.substr(start, end - start + 1);
+		size_t Ttart = TempValue.find_first_not_of(" ");
+		size_t End = TempValue.find_last_not_of(" ");
+		if (Ttart != string::npos && End != string::npos) {
+			TempValue = TempValue.substr(Ttart, End - Ttart + 1);
 		}
 
 		// 提取token值，去除位置信息（左括号之前的部分）
-		string tokenValue = tempValue;
-		size_t pos = tempValue.find('(');
-		if (pos != string::npos) {
-			tokenValue = tempValue.substr(0, pos - 1); // -1去除括号前的空格
+		string TokenValue = TempValue;
+		size_t Pos = TempValue.find('(');
+		if (Pos != string::npos) {
+			TokenValue = TempValue.substr(0, Pos - 1); // -1去除括号前的空格
 		}
 
 		// 定义token类型到语法符号的映射表
@@ -235,7 +235,6 @@ vector<GrammarSymbol> ShiftReduceParser::LoadTokensFromFile(const string& tokenF
 			{"LTE", "<="},
 			{"EQ", "=="},
 			{"NEQ", "!="},
-			{"ASSIGN", "="},
 
 			// 界符
 			{"LPAREN", "("},
@@ -247,24 +246,28 @@ vector<GrammarSymbol> ShiftReduceParser::LoadTokensFromFile(const string& tokenF
 		};
 
 		// 处理token类型，映射到语法终端符号
-		if (tokenType == "ID") {
+		if (TokenType == "ID") {
 			// ID类型映射到语法中的'id'终结符
-			Tokens.push_back(GrammarSymbol("id", true, tokenType));
+			Tokens.push_back(GrammarSymbol("id", true, TokenType));
 		}
-		else if (tokenType == "NUM") {
+		else if (TokenType == "NUM") {
 			// NUM类型映射到语法中的'num'终结符
-			Tokens.push_back(GrammarSymbol("num", true, tokenType));
+			Tokens.push_back(GrammarSymbol("num", true, TokenType));
+		}
+		else if (TokenType == "ASSIGN") {
+			// 赋值符也使用语法的
+			Tokens.push_back(GrammarSymbol(TokenValue, true, TokenType));
 		}
 		else {
 			// 查找映射表
-			auto it = tokenToSymbolMap.find(tokenType);
+			auto it = tokenToSymbolMap.find(TokenType);
 			if (it != tokenToSymbolMap.end()) {
 				// 找到映射，使用映射后的符号
-				Tokens.push_back(GrammarSymbol(it->second, true, tokenType));
+				Tokens.push_back(GrammarSymbol(it->second, true, TokenType));
 			}
 			else {
 				// 未找到映射，使用解析得到的token值
-				Tokens.push_back(GrammarSymbol(tokenValue, true, tokenType));
+				Tokens.push_back(GrammarSymbol(TokenValue, true, TokenType));
 			}
 		}
 	}

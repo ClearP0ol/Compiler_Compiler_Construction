@@ -12,12 +12,13 @@ using namespace std;
 
 // 语法符号（终结符或非终结符）
 struct GrammarSymbol {
-	string Name; // 符号名
-	bool IsTerminal; // 是否为终结符
+	string Name;      // 符号名
+	bool IsTerminal;  // 是否为终结符
 	string TokenType; // Token类型（如ID、NUM、PLUS等）
 
 	// 构造函数
-	GrammarSymbol(const string& name = "", bool isTerminal = false, const string& tokenType = "")
+	GrammarSymbol(const string& name = "", bool isTerminal = false,
+		const string& tokenType = "")
 		: Name(name), IsTerminal(isTerminal), TokenType(tokenType) {
 	}
 
@@ -43,15 +44,16 @@ struct GrammarSymbol {
 
 // 产生式
 struct Production {
-	GrammarSymbol Left;           // 左部非终结符
-	vector<GrammarSymbol> Right;  // 右部符号序列
-	int Id;                       // 产生式编号
+	GrammarSymbol Left;          // 左部非终结符
+	vector<GrammarSymbol> Right; // 右部符号序列
+	int Id;                      // 产生式编号
 
 	// 空构造
 	Production() : Id(-1) {}
 
 	// 输入构造
-	Production(const GrammarSymbol& left, const vector<GrammarSymbol>& right, int id = -1)
+	Production(const GrammarSymbol& left, const vector<GrammarSymbol>& right,
+		int id = -1)
 		: Left(left), Right(right), Id(id) {
 	}
 
@@ -72,11 +74,11 @@ struct Production {
 
 // 语法定义
 struct GrammarDefinition {
-	string Name;                          // 语法名称
-	GrammarSymbol StartSymbol;            // 开始符号
-	vector<GrammarSymbol> Terminals;      // 终结符集合
-	vector<GrammarSymbol> NonTerminals;   // 非终结符集合
-	vector<Production> Productions;       // 产生式集合
+	string Name;                        // 语法名称
+	GrammarSymbol StartSymbol;          // 开始符号
+	vector<GrammarSymbol> Terminals;    // 终结符集合
+	vector<GrammarSymbol> NonTerminals; // 非终结符集合
+	vector<Production> Productions;     // 产生式集合
 
 	// 查找符号
 	GrammarSymbol FindSymbol(const string& name, bool isTerminal) const {
@@ -101,7 +103,8 @@ struct GrammarDefinition {
 	// 判断是否为终结符
 	bool IsTerminal(const string& name) const {
 		for (const auto& Symbol : Terminals) {
-			if (Symbol.Name == name) return true;
+			if (Symbol.Name == name)
+				return true;
 		}
 		return false;
 	}
@@ -109,7 +112,8 @@ struct GrammarDefinition {
 	// 判断是否为非终结符
 	bool IsNonTerminal(const string& name) const {
 		for (const auto& Symbol : NonTerminals) {
-			if (Symbol.Name == name) return true;
+			if (Symbol.Name == name)
+				return true;
 		}
 		return false;
 	}
@@ -149,12 +153,12 @@ struct GrammarLoader {
 
 		cout << "正在加载语法文件: " << filePath << endl;
 
-		string Line; // 按行读取
+		string Line;     // 按行读取
 		int LineNum = 0; // 行计数
 
 		while (getline(File, Line)) {
 			LineNum++;
-			Trim(Line); //去除字符串首尾空白
+			Trim(Line); // 去除字符串首尾空白
 
 			// 跳过空行和注释
 			if (Line.empty() || Line[0] == '#') {
@@ -217,7 +221,8 @@ struct GrammarLoader {
 	// 提取值
 	static string ExtractValue(const string& line) {
 		size_t SpacePos = line.find(' ');
-		if (SpacePos == string::npos) return "";
+		if (SpacePos == string::npos)
+			return "";
 
 		string Value = line.substr(SpacePos + 1);
 		Trim(Value);
@@ -225,7 +230,8 @@ struct GrammarLoader {
 	}
 
 	// 解析产生式
-	void ParseProduction(const string& line, GrammarDefinition& grammar, int lineNum) {
+	void ParseProduction(const string& line, GrammarDefinition& grammar,
+		int lineNum) {
 		size_t ArrowPos = line.find("->");
 		if (ArrowPos == string::npos) {
 			cout << "error：第 " << lineNum << " 行没有找到 '->' 符号" << endl;
@@ -251,7 +257,8 @@ struct GrammarLoader {
 	}
 
 	// 解析只有右部的情况（续行）
-	void ParseRightPartOnly(const string& line, GrammarDefinition& grammar, int lineNum) {
+	void ParseRightPartOnly(const string& line, GrammarDefinition& grammar,
+		int lineNum) {
 		if (grammar.Productions.empty()) {
 			cout << "error：第 " << lineNum << " 行没有对应的左部" << endl;
 			return;
@@ -262,7 +269,8 @@ struct GrammarLoader {
 	}
 
 	// 解析右部符号
-	void ParseRightSymbols(const string& rightStr, vector<GrammarSymbol>& symbols) {
+	void ParseRightSymbols(const string& rightStr,
+		vector<GrammarSymbol>& symbols) {
 		size_t Start = 0;
 		size_t End = 0;
 
@@ -284,7 +292,7 @@ struct GrammarLoader {
 					End = rightStr.length();
 				}
 				else {
-					End++;  // 包含结束引号
+					End++; // 包含结束引号
 				}
 			}
 			else {
@@ -298,8 +306,7 @@ struct GrammarLoader {
 			string SymbolName = rightStr.substr(Start, End - Start);
 
 			// 去除引号（如果存在）
-			if (SymbolName.length() >= 2 &&
-				SymbolName.front() == '\'' &&
+			if (SymbolName.length() >= 2 && SymbolName.front() == '\'' &&
 				SymbolName.back() == '\'') {
 				SymbolName = SymbolName.substr(1, SymbolName.length() - 2);
 			}
@@ -319,18 +326,17 @@ struct GrammarLoader {
 		// 单字符运算符
 		if (symbol.length() == 1) {
 			char c = symbol[0];
-			if (c == '+' || c == '-' || c == '*' || c == '/' ||
-				c == '(' || c == ')' || c == '{' || c == '}' ||
-				c == ';' || c == '=' || c == '<' || c == '>') {
+			if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' ||
+				c == ')' || c == '{' || c == '}' || c == ';' || c == '=' ||
+				c == '<' || c == '>') {
 				return true;
 			}
 		}
 
 		// 多字符运算符和关键字
 		static const vector<string> TerminalKeywords = {
-			"if", "else", "while", "return", "int", "void",
-			"id", "num", "==", "!=", "<=", ">="
-		};
+			"if",  "else", "while", "return", "int", "void", "id",
+			"num", "==",   "!=",    "<=",     ">=",  ":=" };
 
 		for (const auto& Keyword : TerminalKeywords) {
 			if (symbol == Keyword) {
@@ -355,16 +361,20 @@ struct GrammarLoader {
 	}
 
 	// 添加符号到相应集合
-	void AddSymbolIfNotExists(const GrammarSymbol& sym, GrammarDefinition& grammar) {
+	void AddSymbolIfNotExists(const GrammarSymbol& sym,
+		GrammarDefinition& grammar) {
 		// 如果为空
-		if (sym.Name.empty()) return;
+		if (sym.Name.empty())
+			return;
 
 		// 如果已经添加
 		for (const auto& Existing : grammar.Terminals) {
-			if (Existing.Name == sym.Name) return;
+			if (Existing.Name == sym.Name)
+				return;
 		}
 		for (const auto& Existing : grammar.NonTerminals) {
-			if (Existing.Name == sym.Name) return;
+			if (Existing.Name == sym.Name)
+				return;
 		}
 
 		if (sym.IsTerminal) {
