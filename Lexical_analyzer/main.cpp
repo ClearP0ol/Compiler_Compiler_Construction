@@ -52,10 +52,14 @@ int main() {
             }
 
             output << tokenName(tok.type);
+
             if (!tok.lexeme.empty()) {
                 output << " : " << tok.lexeme;
             }
+
+            output << " (" << tok.line << "," << tok.column << ")";
             output << "\n";
+
 
             if (tok.type == TokenType::ENDFILE) {
                 break;
