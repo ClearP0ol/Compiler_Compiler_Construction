@@ -6,20 +6,40 @@ GRAMMAR_NAME MiniC
 # 开始符号
 START_SYMBOL Program
 
-# 程序，由语句列表组成
-Program -> StmtList
+# 程序，由函数定义组成
+Program -> FunctionDefinition
+
+# 函数定义
+FunctionDefinition -> Type 'id' '(' ParameterList ')' CompoundStatement
+FunctionDefinition -> Type 'id' '(' ')' CompoundStatement
+
+# 参数列表
+ParameterList -> Parameter
+ParameterList -> Parameter ',' ParameterList
+
+# 参数：类型和标识符
+Parameter -> Type 'id'
+
+# 类型声明（根据token只包含int和void）
+Type -> 'int'
+Type -> 'void'
 
 # 语句列表，可以是一个或多个语句
 StmtList -> Stmt
 StmtList -> Stmt StmtList
 
-# 表达式语句、选择语句、循环语句、返回语句、复合语句、赋值语句
+# 表达式语句、选择语句、循环语句、返回语句、复合语句、赋值语句、声明语句
 Stmt -> ExprStatement
 Stmt -> SelectionStatement
 Stmt -> IterationStatement
 Stmt -> ReturnStatement
 Stmt -> CompoundStatement
 Stmt -> AssignmentStatement
+Stmt -> DeclarationStatement
+
+# 变量声明语句，支持带有初始化和不带初始化的声明
+DeclarationStatement -> Type 'id' ';'
+DeclarationStatement -> Type 'id' '=' Expr ';'
 
 # 有表达式的语句、空语句
 ExprStatement -> Expr ';'
