@@ -10,9 +10,9 @@ int main() {
     GrammarLoader Loader;
 
     // 测试文件路径
-    // string GrammarFile = "MiniC.grammar";  // 切换到MiniC语法文件
+    string GrammarFile = "MiniC.grammar";  // 切换到MiniC语法文件
     // string GrammarFile = "Tiny.grammar";   // 切换到Tiny语法文件
-    string GrammarFile = "Expr.grammar";   // 切换到Expr语法文件
+    // string GrammarFile = "Expr.grammar";   // 切换到Expr语法文件
 
     // 加载语法
     GrammarDefinition Grammar = Loader.LoadFromFile(GrammarFile);

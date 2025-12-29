@@ -107,11 +107,6 @@ struct LRItem {
 		return Result;
 	}
 
-	// 打印项目 - 调用ToString
-	void Print() const {
-		cout << ToString();
-	}
-
 	// 获取项目的哈希值
 	size_t Hash() const {
 		size_t HashValue = hash<string>{}(ProductionRef.Left.Name);
