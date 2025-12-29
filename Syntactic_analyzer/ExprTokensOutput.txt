@@ -1,0 +1,20 @@
+LPAREN : (
+LPAREN : (
+NUM : 12
+PLUS : +
+NUM : 34
+RPAREN : )
+MULT : *
+NUM : 5
+MINUS : -
+NUM : 6
+RPAREN : )
+DIV : /
+LPAREN : (
+NUM : 7
+MINUS : -
+NUM : 8
+MULT : *
+NUM : 9
+RPAREN : )
+ENDFILE
