@@ -18,5 +18,27 @@
     <ClInclude Include="token.hpp">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="FirstFollowCalculator.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="GrammarLoader.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LRAutomaton.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+    <ClInclude Include="LRItem.hpp">
+      <Filter>头文件</Filter>
+    </ClInclude>
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="Main.cpp">
+      <Filter>源文件</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="MiniC.grammar">
+      <Filter>资源文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

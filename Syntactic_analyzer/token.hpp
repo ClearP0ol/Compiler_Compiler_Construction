@@ -10,6 +10,9 @@ enum class TokenType {
 	ENDFILE,    // 输入结束标志
 	ERROR,      // 词法错误
 
+	READ,
+	WRITE,
+
 	// 标识符与字面量
 	ID,         // 变量名/函数名
 	NUM,        // 整型常量
