@@ -21,16 +21,23 @@ std::string readFile(const std::string& filename) {
     return oss.str();
 }
 
-int main() {
+int main(int argc, char* argv[]) {
     try {
+        // ===== 参数检查 =====
+        if (argc < 2) {
+            std::ofstream ofs("output.txt");
+            ofs << "Usage: lexer_gen <source_file>\n";
+            return 1;
+        }
+
+        std::string sourceFile = argv[1];
+
         // ===== 读入源代码 =====
-        std::string code = readFile("test.txt");
+        std::string code = readFile(sourceFile);
 
         // ===== 使用规则文件生成扫描器 =====
         LexerGenerator gen;
-        // gen.loadRuleFile("rules/expr.lex");
         gen.loadRuleFile("rules/tiny.lex");
-        // gen.loadRuleFile("rules/c_like.lex");
 
         DFA dfa = gen.buildDFA();   // 正则 → NFA → DFA → 最小化 DFA
 
@@ -59,7 +66,6 @@ int main() {
 
             output << " (" << tok.line << "," << tok.column << ")";
             output << "\n";
-
 
             if (tok.type == TokenType::ENDFILE) {
                 break;
