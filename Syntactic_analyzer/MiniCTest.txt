@@ -1,0 +1,14 @@
+int a = 0;
+int main()
+{
+    int _sab = 0;
+    while (_sab < 10)
+    {
+        _sab = _sab + 1;
+    }
+    if (a != 2)
+    {
+        a = 2;
+    }
+    return 0;
+}
