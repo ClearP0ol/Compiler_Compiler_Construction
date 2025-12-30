@@ -6,8 +6,17 @@ GRAMMAR_NAME MiniC
 # 开始符号
 START_SYMBOL Program
 
-# 程序，由函数定义组成
-Program -> FunctionDefinition
+# 程序，由全局变量和函数定义组成
+Program -> GlobalDeclarations FunctionDefinitions
+Program -> FunctionDefinitions
+
+# 全局变量声明列表
+GlobalDeclarations -> DeclarationStatement
+GlobalDeclarations -> DeclarationStatement GlobalDeclarations
+
+# 函数定义列表
+FunctionDefinitions -> FunctionDefinition
+FunctionDefinitions -> FunctionDefinition FunctionDefinitions
 
 # 函数定义
 FunctionDefinition -> Type id ( ParameterList ) CompoundStatement
@@ -47,6 +56,7 @@ ExprStatement -> ;
 
 # 选择语句
 SelectionStatement -> if ( RelExpr ) Stmt
+SelectionStatement -> if ( RelExpr ) Stmt else Stmt
 
 # 循环语句
 IterationStatement -> while ( RelExpr ) Stmt
