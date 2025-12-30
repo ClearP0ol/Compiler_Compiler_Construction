@@ -10,19 +10,19 @@ START_SYMBOL Program
 Program -> FunctionDefinition
 
 # 函数定义
-FunctionDefinition -> Type 'id' '(' ParameterList ')' CompoundStatement
-FunctionDefinition -> Type 'id' '(' ')' CompoundStatement
+FunctionDefinition -> Type id ( ParameterList ) CompoundStatement
+FunctionDefinition -> Type id ( ) CompoundStatement
 
 # 参数列表
 ParameterList -> Parameter
 ParameterList -> Parameter ',' ParameterList
 
 # 参数：类型和标识符
-Parameter -> Type 'id'
+Parameter -> Type id
 
 # 类型声明（根据token只包含int和void）
-Type -> 'int'
-Type -> 'void'
+Type -> int
+Type -> void
 
 # 语句列表，可以是一个或多个语句
 StmtList -> Stmt
@@ -38,53 +38,53 @@ Stmt -> AssignmentStatement
 Stmt -> DeclarationStatement
 
 # 变量声明语句，支持带有初始化和不带初始化的声明
-DeclarationStatement -> Type 'id' ';'
-DeclarationStatement -> Type 'id' '=' Expr ';'
+DeclarationStatement -> Type id ;
+DeclarationStatement -> Type id = Expr ;
 
 # 有表达式的语句、空语句
-ExprStatement -> Expr ';'
-ExprStatement -> ';'
+ExprStatement -> Expr ;
+ExprStatement -> ;
 
 # 选择语句
-SelectionStatement -> 'if' '(' RelExpr ')' Stmt
+SelectionStatement -> if ( RelExpr ) Stmt
 
 # 循环语句
-IterationStatement -> 'while' '(' RelExpr ')' Stmt
+IterationStatement -> while ( RelExpr ) Stmt
 
 # 赋值语句
-AssignmentStatement -> 'id' '=' Expr ';'
+AssignmentStatement -> id = Expr ;
 
 # 无值返回与带值返回
-ReturnStatement -> 'return' ';'
-ReturnStatement -> 'return' Expr ';'
+ReturnStatement -> return ;
+ReturnStatement -> return Expr ;
 
 # 空代码块与带值代码块
-CompoundStatement -> '{' '}'
-CompoundStatement -> '{' StmtList '}'
+CompoundStatement -> { }
+CompoundStatement -> { StmtList }
 
 # 关系表达式，支持比较运算
 RelExpr -> Expr RelOp Expr
 RelExpr -> Expr
 
 # 关系运算符
-RelOp -> '<'
-RelOp -> '>'
-RelOp -> '<='
-RelOp -> '>='
-RelOp -> '=='
-RelOp -> '!='
+RelOp -> <
+RelOp -> >
+RelOp -> <=
+RelOp -> >=
+RelOp -> ==
+RelOp -> !=
 
 # 表达式，加法减法与基础项
-Expr -> Expr '+' Term
-Expr -> Expr '-' Term
+Expr -> Expr + Term
+Expr -> Expr - Term
 Expr -> Term
 
 # 项，乘法、除法与基础因子
-Term -> Term '*' Factor
-Term -> Term '/' Factor
+Term -> Term * Factor
+Term -> Term / Factor
 Term -> Factor
 
 # 变量名、数字常量、括号表达式
-Factor -> 'id'
-Factor -> 'num'
-Factor -> '(' Expr ')'
+Factor -> id
+Factor -> num
+Factor -> ( Expr )
