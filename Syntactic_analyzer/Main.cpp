@@ -9,15 +9,22 @@
 
 using namespace std;
 
-int main()
+int main(int argc, char* argv[])
 {
+	// 检查命令行参数数量
+	if (argc < 3)
+	{
+		cout << "使用方法: " << argv[0] << " <语法规则文件> <Tokens流文件>" << endl;
+		cout << "示例: " << argv[0] << " MiniC.grammar MiniCTokensOutput.txt" << endl;
+		return 1;
+	}
+
 	// 创建语法加载器
 	GrammarLoader Loader;
 
-	// 测试文件路径
-	string GrammarFile = "MiniC.grammar";  // 切换到MiniC语法文件
-	// string GrammarFile = "Tiny.grammar";   // 切换到Tiny语法文件
-	// string GrammarFile = "Expr.grammar";   // 切换到Expr语法文件
+	// 从命令行参数获取文件路径
+	string GrammarFile = argv[1];
+	string TokenFile = argv[2];
 
 	// 加载语法
 	GrammarDefinition Grammar = Loader.LoadFromFile(GrammarFile);
@@ -85,26 +92,6 @@ int main()
 		{
 			// 创建分析器实例
 			ShiftReduceParser Parser(SLRTable);
-
-			// 根据当前选择的语法文件读取相应的词法分析器输出文件
-			string TokenFile;
-			if (GrammarFile == "Expr.grammar")
-			{
-				TokenFile = "ExprTokensOutput.txt";
-			}
-			else if (GrammarFile == "Tiny.grammar")
-			{
-				TokenFile = "TinyTokensOutput.txt";
-			}
-			else if (GrammarFile == "MiniC.grammar")
-			{
-				TokenFile = "MiniCTokensOutput.txt";
-			}
-			else
-			{
-				cout << "未知的语法文件" << endl;
-				return 1;
-			}
 
 			// 从文件解析
 			cout << "\n从文件中解析tokens: " << TokenFile << endl;
