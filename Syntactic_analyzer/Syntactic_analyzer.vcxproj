@@ -132,7 +132,6 @@
     <ClInclude Include="LRItem.hpp" />
     <ClInclude Include="ShiftReduceParser.hpp" />
     <ClInclude Include="SLRAnalysisTable.hpp" />
-    <ClInclude Include="Token.hpp" />
   </ItemGroup>
   <ItemGroup>
     <Text Include="ExprTokensOutput.txt" />

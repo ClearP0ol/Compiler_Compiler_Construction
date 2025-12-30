@@ -41,9 +41,6 @@
     <ClInclude Include="LRItem.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="Token.hpp">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="SLRAnalysisTable.hpp">
       <Filter>Header Files</Filter>
     </ClInclude>

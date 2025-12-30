@@ -7,15 +7,15 @@ GRAMMAR_NAME Expr
 START_SYMBOL Expr
 
 # 表达式：加法、减法、项
-Expr -> Expr '+' Term
-Expr -> Expr '-' Term
+Expr -> Expr + Term
+Expr -> Expr - Term
 Expr -> Term
 
 # 项：乘法、除法、因子
-Term -> Term '*' Factor
-Term -> Term '/' Factor
+Term -> Term * Factor
+Term -> Term / Factor
 Term -> Factor
 
 # 因子：数字、括号表达式
-Factor -> 'num'
-Factor -> '(' Expr ')'
+Factor -> num
+Factor -> ( Expr )

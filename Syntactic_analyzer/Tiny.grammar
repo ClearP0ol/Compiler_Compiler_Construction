@@ -21,29 +21,29 @@ Stmt -> WhileStatement
 Stmt -> AssignmentStatement
 
 # read语句
-ReadStatement -> 'read' 'id' ';'
+ReadStatement -> read id ;
 
 # write语句
-WriteStatement -> 'write' 'id' ';'
+WriteStatement -> write id ;
 
 # if-else语句
-IfStatement -> 'if' '(' RelExpr ')' Stmt
-IfStatement -> 'if' '(' RelExpr ')' Stmt 'else' Stmt
+IfStatement -> if ( RelExpr ) Stmt
+IfStatement -> if ( RelExpr ) Stmt else Stmt
 
 # while语句
-WhileStatement -> 'while' '(' RelExpr ')' Stmt
+WhileStatement -> while ( RelExpr ) Stmt
 
 # 赋值语句（使用:=符号）
-AssignmentStatement -> 'id' ':=' 'id' ';'
+AssignmentStatement -> id := id ;
 
 # 关系表达式
-RelExpr -> 'id' RelOp 'id'
-RelExpr -> 'id' RelOp 'num'
+RelExpr -> id RelOp id
+RelExpr -> id RelOp num
 
 # 关系运算符
-RelOp -> '<'
-RelOp -> '<='
-RelOp -> '>'
-RelOp -> '>='
-RelOp -> '=='
-RelOp -> '!='
+RelOp -> <
+RelOp -> <=
+RelOp -> >
+RelOp -> >=
+RelOp -> ==
+RelOp -> !=
