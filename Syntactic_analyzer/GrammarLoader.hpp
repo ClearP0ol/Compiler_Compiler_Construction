@@ -314,24 +314,20 @@ struct GrammarLoader
 	// 判断是否为终结符符号
 	bool IsTerminalSymbol(const string& symbol)
 	{
-		// 单字符运算符
-		if (symbol.length() == 1)
-		{
-			char c = symbol[0];
-			if (c == '+' || c == '-' || c == '*' || c == '/' || c == '(' ||
-				c == ')' || c == '{' || c == '}' || c == ';' || c == '=' ||
-				c == '<' || c == '>')
-			{
-				return true;
-			}
-		}
-
-		// 多字符运算符和关键字
+		// 运算符集合
 		static const vector<string> TerminalKeywords = {
-			"if", "else", "while", "return", "int", "void", "id",
-			"num", "==", "!=", "<=", ">=", ":=", "read", "write"
+			// 单字符运算符
+			"+", "-", "*", "/", "(", ")", "{", "}", ";", "=",
+			"<", ">", "!", ",", ".", "&", "|", "^", "~", "%", "?",
+			":", "[", "]",
+			// 多字符运算符
+			"==", "!=", "<=", ">=", ":=", "++", "--",
+			"*=", "/=", "%=", "&=", "|=", "^=",
+			"<<", ">>", "<<=", ">>=",
+			"&&", "||", "->"
 		};
 
+		// 检查是否在运算符集合中
 		for (const auto& Keyword : TerminalKeywords)
 		{
 			if (symbol == Keyword)
