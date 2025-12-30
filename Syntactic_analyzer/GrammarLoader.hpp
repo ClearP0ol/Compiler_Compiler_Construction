@@ -5,6 +5,7 @@
 #include <cctype>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -59,8 +60,7 @@ struct Production
 	Production() : Id(-1) {}
 
 	// 输入构造
-	Production(const GrammarSymbol& left, const vector<GrammarSymbol>& right,
-		int id = -1)
+	Production(const GrammarSymbol& left, const vector<GrammarSymbol>& right, int id = -1)
 		: Left(left), Right(right), Id(id)
 	{
 	}
@@ -195,18 +195,15 @@ struct GrammarLoader
 				continue;
 			}
 
-			// 转换为小写处理关键词
-			string LineLower = ToLower(Line);
-
 			// 解析语法名称
-			if (LineLower.find("grammar_name") == 0)
+			if (Line.find("GRAMMAR_NAME") == 0)
 			{
 				Grammar.Name = ExtractValue(Line);
 				continue;
 			}
 
 			// 解析开始符号
-			if (LineLower.find("start_symbol") == 0)
+			if (Line.find("START_SYMBOL") == 0)
 			{
 				string StartSymbol = ExtractValue(Line);
 				Grammar.StartSymbol = GrammarSymbol(StartSymbol, false);
@@ -245,14 +242,6 @@ struct GrammarLoader
 	{
 		str.erase(0, str.find_first_not_of(" \t\r\n"));
 		str.erase(str.find_last_not_of(" \t\r\n") + 1);
-	}
-
-	// 转换为小写
-	static string ToLower(const string& str)
-	{
-		string Result = str;
-		transform(Result.begin(), Result.end(), Result.begin(), ::tolower);
-		return Result;
 	}
 
 	// 提取值
@@ -311,62 +300,14 @@ struct GrammarLoader
 	// 解析右部符号
 	void ParseRightSymbols(const string& rightStr, vector<GrammarSymbol>& symbols)
 	{
-		size_t Start = 0;
-		size_t End = 0;
+		istringstream Iss(rightStr);
+		string SymbolName;
 
-		while (Start < rightStr.length())
+		while (Iss >> SymbolName)
 		{
-			// 跳过右部空格
-			while (Start < rightStr.length() && isspace(rightStr[Start]))
-			{
-				Start++;
-			}
-
-			// 全空则跳过
-			if (Start >= rightStr.length())
-			{
-				break;
-			}
-
-			// 检查是否为带引号的终结符
-			if (rightStr[Start] == '\'')
-			{
-				End = rightStr.find('\'', Start + 1);
-				if (End == string::npos)
-				{
-					End = rightStr.length();
-				}
-				else
-				{
-					End++; // 包含结束引号
-				}
-			}
-			else
-			{
-				// 普通符号
-				End = Start;
-				while (End < rightStr.length() && !isspace(rightStr[End]))
-				{
-					End++;
-				}
-			}
-
-			string SymbolName = rightStr.substr(Start, End - Start);
-
-			// 去除引号（如果存在）
-			if (SymbolName.length() >= 2 && SymbolName.front() == '\'' &&
-				SymbolName.back() == '\'')
-			{
-				SymbolName = SymbolName.substr(1, SymbolName.length() - 2);
-			}
-
 			// 判断符号类型
-			// 关键字（if, while, return）和运算符当作终结符
 			bool IsTerminal = IsTerminalSymbol(SymbolName);
-
 			symbols.push_back(GrammarSymbol(SymbolName, IsTerminal));
-
-			Start = End;
 		}
 	}
 
@@ -388,7 +329,8 @@ struct GrammarLoader
 		// 多字符运算符和关键字
 		static const vector<string> TerminalKeywords = {
 			"if", "else", "while", "return", "int", "void", "id",
-			"num", "==", "!=", "<=", ">=", ":=" };
+			"num", "==", "!=", "<=", ">=", ":=", "read", "write"
+		};
 
 		for (const auto& Keyword : TerminalKeywords)
 		{
@@ -398,20 +340,17 @@ struct GrammarLoader
 			}
 		}
 
-		// 字母开头的全小写的符号是非终结符
+		// 字母开头的全小写的符号是终结符
 		if (!symbol.empty() && isalpha(symbol[0]))
 		{
-
-			bool AllLower = true;
 			for (char c : symbol)
 			{
 				if (isalpha(c) && !islower(c))
 				{
-					AllLower = false;
-					break;
+					return false; // 有大写字母，是非终结符
 				}
 			}
-			return AllLower;
+			return true; // 全小写，是终结符
 		}
 
 		return false;

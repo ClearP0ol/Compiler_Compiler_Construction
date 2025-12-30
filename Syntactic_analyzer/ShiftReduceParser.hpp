@@ -123,7 +123,7 @@ struct ShiftReduceParser
 				const Production& Prod = GetProductionById(Action.StateOrProduction);
 				cout << "使用产生式: " << Prod.ToString() << "\n";
 
-				// 特殊处理：如果是增广文法的开始产生式（Program' -> Program），直接接受
+				// 如果是增广文法的开始产生式（Program' -> Program）
 				if (Prod.Left.Name == Grammar.StartSymbol.Name)
 				{
 					cout << "\n分析成功：通过增广产生式接受\n";
