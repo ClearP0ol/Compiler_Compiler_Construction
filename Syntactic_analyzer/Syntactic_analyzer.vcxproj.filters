@@ -58,13 +58,13 @@
     <Text Include="TinyTokensOutput.txt">
       <Filter>Source Files\Tiny</Filter>
     </Text>
-    <Text Include="TestExpr.txt">
+    <Text Include="ExprTest.txt">
       <Filter>Source Files\Expr</Filter>
     </Text>
-    <Text Include="TestMiniC.txt">
+    <Text Include="MiniCTest.txt">
       <Filter>Source Files\MiniC</Filter>
     </Text>
-    <Text Include="TestTiny.txt">
+    <Text Include="TinyTest.txt">
       <Filter>Source Files\Tiny</Filter>
     </Text>
   </ItemGroup>
@@ -77,6 +77,21 @@
     </None>
     <None Include="Tiny.grammar">
       <Filter>Source Files\Tiny</Filter>
+    </None>
+    <None Include="LexerGen.exe">
+      <Filter>Source Files</Filter>
+    </None>
+    <None Include="Expr.lex">
+      <Filter>Source Files\Expr</Filter>
+    </None>
+    <None Include="MiniC.lex">
+      <Filter>Source Files\MiniC</Filter>
+    </None>
+    <None Include="Tiny.lex">
+      <Filter>Source Files\Tiny</Filter>
+    </None>
+    <None Include="Makefile">
+      <Filter>Source Files</Filter>
     </None>
   </ItemGroup>
 </Project>

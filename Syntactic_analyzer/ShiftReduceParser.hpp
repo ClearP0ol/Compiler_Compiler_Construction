@@ -86,7 +86,7 @@ struct ShiftReduceParser
 	// 解析函数：接收符号序列，返回是否解析成功
 	bool Parse(const vector<GrammarSymbol>& inputSymbols)
 	{
-		cout << "开始移进-归约分析...\n";
+		cout << "开始移进-归约分析。\n";
 
 		size_t InputIndex = 0;
 		const GrammarSymbol& EndSymbol = TableBuilder.FFCalculator.EndSymbol;
@@ -95,20 +95,28 @@ struct ShiftReduceParser
 		{
 			// 获取当前状态和当前输入符号
 			int CurrentState = StateStack.top();
-			const GrammarSymbol& CurrentInput =
-				(InputIndex < inputSymbols.size()) ? inputSymbols[InputIndex] : EndSymbol;
+			const GrammarSymbol& CurrentInput = (InputIndex < inputSymbols.size()) ? inputSymbols[InputIndex] : EndSymbol;
+
+			// 处理ID和NUM
+			GrammarSymbol LookupSymbol = CurrentInput;
+			if (CurrentInput.TokenType == "ID") {
+				LookupSymbol.Name = "id";
+			}
+			else if (CurrentInput.TokenType == "NUM") {
+				LookupSymbol.Name = "num";
+			}
 
 			cout << "\n当前状态: " << CurrentState << ", 当前输入符号: " << CurrentInput.Name << "\n";
 			PrintStacks();
 
 			// 查找ACTION表
-			const SLRAction& Action = TableBuilder.GetAction(CurrentState, CurrentInput);
+			const SLRAction& Action = TableBuilder.GetAction(CurrentState, LookupSymbol);
 
 			if (Action.Type == SLRActionType::SHIFT)
 			{
 				cout << "执行移进操作: S" << Action.StateOrProduction << "\n";
-				// 移进输入符号和状态
-				SymbolStack.push(CurrentInput);
+				// 移进处理后的符号和状态
+				SymbolStack.push(LookupSymbol);
 				StateStack.push(Action.StateOrProduction);
 				// 移动到下一个输入符号
 				if (CurrentInput != EndSymbol)
@@ -224,20 +232,7 @@ struct ShiftReduceParser
 				{
 					Iss >> Position;
 
-					// 特殊处理ID和NUM类型
-					if (TokenTypeStr == "ID")
-					{
-						Tokens.push_back(GrammarSymbol("id", true, TokenTypeStr, Position));
-					}
-					else if (TokenTypeStr == "NUM")
-					{
-						Tokens.push_back(GrammarSymbol("num", true, TokenTypeStr, Position));
-					}
-					else
-					{
-						// 其他类型直接使用token值
-						Tokens.push_back(GrammarSymbol(TokenValue, true, TokenTypeStr, Position));
-					}
+					Tokens.push_back(GrammarSymbol(TokenValue, true, TokenTypeStr, Position));
 				}
 			}
 		}
@@ -245,6 +240,7 @@ struct ShiftReduceParser
 		File.close();
 		return Tokens;
 	}
+
 };
 
 #endif // SHIFTREDUCEPARSER_HPP

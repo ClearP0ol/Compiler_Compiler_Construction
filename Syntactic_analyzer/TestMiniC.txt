@@ -1,7 +1,0 @@
-int main() {
-    int _sab = 0;
-    while (_sab < 1023) {
-        _sab = _sab + 23;
-    }
-    return 0;
-}

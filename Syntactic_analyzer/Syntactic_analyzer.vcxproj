@@ -136,15 +136,20 @@
   <ItemGroup>
     <Text Include="ExprTokensOutput.txt" />
     <Text Include="MiniCTokensOutput.txt" />
-    <Text Include="TestExpr.txt" />
-    <Text Include="TestMiniC.txt" />
-    <Text Include="TestTiny.txt" />
+    <Text Include="ExprTest.txt" />
+    <Text Include="MiniCTest.txt" />
+    <Text Include="TinyTest.txt" />
     <Text Include="TinyTokensOutput.txt" />
   </ItemGroup>
   <ItemGroup>
     <None Include="Expr.grammar" />
+    <None Include="Expr.lex" />
+    <None Include="LexerGen.exe" />
+    <None Include="Makefile" />
     <None Include="MiniC.grammar" />
+    <None Include="MiniC.lex" />
     <None Include="Tiny.grammar" />
+    <None Include="Tiny.lex" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
