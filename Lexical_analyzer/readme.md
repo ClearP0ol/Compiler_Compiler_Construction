@@ -15,6 +15,6 @@ test_expr语言：test_expr.txt
 运行多代码文件的命令如下（在powershell或git bash中运行）
 ```
 mingw32-make
-./lexer_gen <测试文件>
+./lexer_gen <源代码文件> <词法规则文件>
 ```
 输出的token流文件：output.txt
