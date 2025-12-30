@@ -12,7 +12,7 @@ tiny语言：test.txt
 
 test_expr语言：test_expr.txt
 
-运行多代码文件的命令如下（在
+运行多代码文件的命令如下（在powershell或git bash中运行）
 ```
 mingw32-make
 ./lexer_gen
