@@ -24,20 +24,21 @@ std::string readFile(const std::string& filename) {
 int main(int argc, char* argv[]) {
     try {
         // ===== 参数检查 =====
-        if (argc < 2) {
+        if (argc < 3) {
             std::ofstream ofs("output.txt");
-            ofs << "Usage: lexer_gen <source_file>\n";
+            ofs << "Usage: lexer_gen <source_file> <rule_file>\n";
             return 1;
         }
 
         std::string sourceFile = argv[1];
+        std::string ruleFile   = argv[2];
 
         // ===== 读入源代码 =====
         std::string code = readFile(sourceFile);
 
         // ===== 使用规则文件生成扫描器 =====
         LexerGenerator gen;
-        gen.loadRuleFile("rules/tiny.lex");
+        gen.loadRuleFile(ruleFile);
 
         DFA dfa = gen.buildDFA();   // 正则 → NFA → DFA → 最小化 DFA
 
