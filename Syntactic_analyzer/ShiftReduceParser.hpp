@@ -86,7 +86,7 @@ struct ShiftReduceParser
 	// 解析函数：接收符号序列，返回是否解析成功
 	bool Parse(const vector<GrammarSymbol>& inputSymbols)
 	{
-		cout << "开始移进-归约分析...\n";
+		cout << "开始移进-归约分析。\n";
 
 		size_t InputIndex = 0;
 		const GrammarSymbol& EndSymbol = TableBuilder.FFCalculator.EndSymbol;
@@ -245,6 +245,7 @@ struct ShiftReduceParser
 		File.close();
 		return Tokens;
 	}
+
 };
 
 #endif // SHIFTREDUCEPARSER_HPP

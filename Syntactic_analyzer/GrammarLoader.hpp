@@ -16,7 +16,7 @@ struct GrammarSymbol
 {
 	string Name;	  // 符号名
 	bool IsTerminal;  // 是否为终结符
-	string TokenType; // Token类型（如ID、NUM、PLUS等）
+	string TokenType; // Token类型
 	string Position;  // 位置
 
 	// 构造函数

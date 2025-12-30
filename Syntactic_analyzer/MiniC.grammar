@@ -10,9 +10,9 @@ START_SYMBOL Program
 Program -> GlobalDeclarations FunctionDefinitions
 Program -> FunctionDefinitions
 
-# 全局变量声明列表
+# 全局变量声明列表，此处左递归解决冲突
 GlobalDeclarations -> DeclarationStatement
-GlobalDeclarations -> DeclarationStatement GlobalDeclarations
+GlobalDeclarations -> GlobalDeclarations DeclarationStatement
 
 # 函数定义列表
 FunctionDefinitions -> FunctionDefinition
