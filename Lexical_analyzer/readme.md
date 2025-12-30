@@ -12,9 +12,9 @@ tiny语言：test.txt
 
 test_expr语言：test_expr.txt
 
-运行多代码文件的命令如下：
+运行多代码文件的命令如下（在
 ```
 mingw32-make
-./lexer-gen
+./lexer_gen
 ```
 输出的token流文件：output.txt
