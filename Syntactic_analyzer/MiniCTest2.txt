@@ -1,0 +1,19 @@
+int a = 0;
+int b = 1;
+int main()
+{
+    int _sab = 0;
+    while (_sab < 10 + b )
+    {
+        _sab = _sab + 1;
+	while( sab < 20 )
+	{
+		sab = sab + 2;
+	}
+    }
+    if (a != 2)
+    {
+        a = 2;
+    }
+    return 0;
+}
