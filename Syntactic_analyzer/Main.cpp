@@ -11,109 +11,110 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-	// æ£€æŸ¥å‘½ä»¤è¡Œå‚æ•°æ•°é‡
+	// ¼ì²éÃüÁîĞĞ²ÎÊıÊıÁ¿
 	if (argc < 3)
 	{
-		cout << "ä½¿ç”¨æ–¹æ³•: " << argv[0] << " <è¯­æ³•è§„åˆ™æ–‡ä»¶> <Tokensæµæ–‡ä»¶>" << endl;
-		cout << "ç¤ºä¾‹: " << argv[0] << " MiniC.grammar MiniCTokensOutput.txt" << endl;
+		cout << "Ê¹ÓÃ·½·¨: " << argv[0] << " <Óï·¨¹æÔòÎÄ¼ş> <TokensÁ÷ÎÄ¼ş>" << endl;
+		cout << "Ê¾Àı: " << argv[0] << " MiniC.grammar MiniCTokensOutput.txt" << endl;
 		return 1;
 	}
 
-	// åˆ›å»ºè¯­æ³•åŠ è½½å™¨
+	// ´´½¨Óï·¨¼ÓÔØÆ÷
 	GrammarLoader Loader;
 
-	// ä»å‘½ä»¤è¡Œå‚æ•°è·å–æ–‡ä»¶è·¯å¾„
+	// ´ÓÃüÁîĞĞ²ÎÊı»ñÈ¡ÎÄ¼şÂ·¾¶
 	string GrammarFile = argv[1];
 	string TokenFile = argv[2];
 
-	// åŠ è½½è¯­æ³•
+	// ¼ÓÔØÓï·¨
 	GrammarDefinition Grammar = Loader.LoadFromFile(GrammarFile);
 
-	// æ£€æŸ¥æ˜¯å¦åŠ è½½æˆåŠŸ
+	// ¼ì²éÊÇ·ñ¼ÓÔØ³É¹¦
 	if (Grammar.Productions.empty())
 	{
 		cout << endl
-			 << "è¯­æ³•åŠ è½½å¤±è´¥ï¼" << endl;
+			 << "Óï·¨¼ÓÔØÊ§°Ü£¡" << endl;
 		return 1;
 	}
 
 	cout << endl
-		 << "è¯­æ³•åŠ è½½æˆåŠŸï¼" << endl;
+		 << "Óï·¨¼ÓÔØ³É¹¦£¡" << endl;
 
-	// åˆ›å»ºFIRST/FOLLOWè®¡ç®—å™¨
-	cout << "\nè®¡ç®—FIRSTå’ŒFOLLOWé›†åˆã€‚" << endl;
+	// ´´½¨FIRST/FOLLOW¼ÆËãÆ÷
+	cout << "\n¼ÆËãFIRSTºÍFOLLOW¼¯ºÏ¡£" << endl;
 	FirstFollowCalculator Calculator(Grammar);
 
-	// è®¡ç®—FIRSTå’ŒFOLLOWé›†åˆ
+	// ¼ÆËãFIRSTºÍFOLLOW¼¯ºÏ
 	Calculator.Calculate();
 
-	// æ‰“å°FIRSTé›†åˆ
+	// ´òÓ¡FIRST¼¯ºÏ
 	Calculator.PrintFirstSets();
 
-	// æ‰“å°FOLLOWé›†åˆ
+	// ´òÓ¡FOLLOW¼¯ºÏ
 	Calculator.PrintFollowSets();
 
-	// æµ‹è¯•LR(0)è‡ªåŠ¨æœºæ„å»ºå™¨
-	cout << "\næµ‹è¯•LR(0)è‡ªåŠ¨æœºæ„å»ºå™¨" << endl;
+	// ²âÊÔLR(0)×Ô¶¯»ú¹¹½¨Æ÷
+	cout << "\n²âÊÔLR(0)×Ô¶¯»ú¹¹½¨Æ÷" << endl;
 
 	try
 	{
-		// åˆ›å»ºLR(0)è‡ªåŠ¨æœº
+		// ´´½¨LR(0)×Ô¶¯»ú
 		LRAutomatonBuilder AutomatonBuilder(Grammar);
 
-		// æ‰“å°è‡ªåŠ¨æœºä¿¡æ¯
-		cout << "LR(0)è‡ªåŠ¨æœºæ„å»ºæˆåŠŸï¼" << endl;
-		cout << "è‡ªåŠ¨æœºçŠ¶æ€æ•°é‡: " << AutomatonBuilder.States.size() << endl;
+		// ´òÓ¡×Ô¶¯»úĞÅÏ¢
+		cout << "LR(0)×Ô¶¯»ú¹¹½¨³É¹¦£¡" << endl;
+		cout << "×Ô¶¯»ú×´Ì¬ÊıÁ¿: " << AutomatonBuilder.States.size() << endl;
 
-		// æ‰“å°å¢å¹¿è¯­æ³•ä¿¡æ¯
-		cout << "å¢å¹¿è¯­æ³•å¼€å§‹ç¬¦å·: " << AutomatonBuilder.AugmentedGrammar.StartSymbol.Name << endl;
+		// ´òÓ¡Ôö¹ãÓï·¨ĞÅÏ¢
+		cout << "Ôö¹ãÓï·¨¿ªÊ¼·ûºÅ: " << AutomatonBuilder.AugmentedGrammar.StartSymbol.Name << endl;
 
-		// æ‰“å°æ‰€æœ‰çŠ¶æ€
+		// ´òÓ¡ËùÓĞ×´Ì¬
 		AutomatonBuilder.PrintAutomaton();
 
-		// æµ‹è¯•SLR(1)åˆ†æè¡¨ç”Ÿæˆå™¨
-		cout << "\næµ‹è¯•SLR(1)åˆ†æè¡¨ç”Ÿæˆå™¨" << endl;
+		// ²âÊÔSLR(1)·ÖÎö±íÉú³ÉÆ÷
+		cout << "\n²âÊÔSLR(1)·ÖÎö±íÉú³ÉÆ÷" << endl;
 
-		// ä¸ºå¢å¹¿æ–‡æ³•åˆ›å»ºFIRST/FOLLOWè®¡ç®—å™¨
+		// ÎªÔö¹ãÎÄ·¨´´½¨FIRST/FOLLOW¼ÆËãÆ÷
 		FirstFollowCalculator AugmentedFF(AutomatonBuilder.AugmentedGrammar);
 		AugmentedFF.Calculate();
 
-		// åˆ›å»ºSLRåˆ†æè¡¨ç”Ÿæˆå™¨
+		// ´´½¨SLR·ÖÎö±íÉú³ÉÆ÷
 		SLRAnalysisTableBuilder SLRTable(AutomatonBuilder, AugmentedFF);
 
-		// æ‰“å°åˆ†æè¡¨
-		cout << "SLR(1)åˆ†æè¡¨ç”ŸæˆæˆåŠŸï¼" << endl;
+		// ´òÓ¡·ÖÎö±í
+		cout << "SLR(1)·ÖÎö±íÉú³É³É¹¦£¡" << endl;
 		SLRTable.PrintTable();
 
-		// æµ‹è¯•ç§»è¿›-å½’çº¦åˆ†æå™¨
-		cout << "\næµ‹è¯•ç§»è¿›-å½’çº¦åˆ†æå™¨" << endl;
+		// ²âÊÔÒÆ½ø-¹éÔ¼·ÖÎöÆ÷
+		cout << "\n²âÊÔÒÆ½ø-¹éÔ¼·ÖÎöÆ÷" << endl;
 
 		try
 		{
-			// åˆ›å»ºåˆ†æå™¨å®ä¾‹
+			// ´´½¨·ÖÎöÆ÷ÊµÀı
 			ShiftReduceParser Parser(SLRTable);
 
-			// ä»æ–‡ä»¶è§£æ
-			cout << "\nä»æ–‡ä»¶ä¸­è§£ætokens: " << TokenFile << endl;
+			// ´ÓÎÄ¼ş½âÎö
+			cout << "\n´ÓÎÄ¼şÖĞ½âÎötokens: " << TokenFile << endl;
 
 			bool Success = Parser.ParseFromFile(TokenFile);
 			if (Success)
 			{
-				cout << "\nç§»è¿›-å½’çº¦åˆ†ææˆåŠŸï¼" << endl;
+				cout << "\nÒÆ½ø-¹éÔ¼·ÖÎö³É¹¦£¡" << endl;
+				Parser.DumpIR();
 			}
 			else
 			{
-				cout << "\nç§»è¿›-å½’çº¦åˆ†æå¤±è´¥ï¼" << endl;
+				cout << "\nÒÆ½ø-¹éÔ¼·ÖÎöÊ§°Ü£¡" << endl;
 			}
 		}
 		catch (const exception &e)
 		{
-			cout << "ç§»è¿›-å½’çº¦åˆ†ææµ‹è¯•é”™è¯¯: " << e.what() << endl;
+			cout << "ÒÆ½ø-¹éÔ¼·ÖÎö²âÊÔ´íÎó: " << e.what() << endl;
 		}
 	}
 	catch (const exception &e)
 	{
-		cout << "é”™è¯¯: " << e.what() << endl;
+		cout << "´íÎó: " << e.what() << endl;
 		return 1;
 	}
 

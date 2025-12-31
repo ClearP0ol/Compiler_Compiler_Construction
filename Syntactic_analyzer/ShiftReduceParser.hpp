@@ -11,18 +11,162 @@
 #include <unordered_map>
 #include <vector>
 
+#define SEM_IR
+
+#ifdef SEM_IR
+#include <variant>
+#include <optional>
+#include <set>
+#endif
+
 using namespace std;
 
-// ç§»è¿›-å½’çº¦åˆ†æå™¨
+// ÒÆ½ø-¹éÔ¼·ÖÎöÆ÷
 struct ShiftReduceParser
 {
+#ifdef SEM_IR
+	enum class BaseType { INT, VOID, BOOL, ERR };
+
+	static inline const char* TypeName(BaseType t) {
+		switch (t) {
+			case BaseType::INT:return "int";
+			case BaseType::VOID:return "void";
+			case BaseType::BOOL:return "bool";
+			default:return "err";
+		}
+	}
+
+	// ====== ÈıµØÖ·/ËÄÔªÊ½ IR ======
+	struct Quad {
+		string op, a1, a2, res;
+		int target = -1; // goto/if µÄÄ¿±ê£¬-1 ±íÊ¾Õ¼Î»
+	};
+	vector<Quad> IR;
+
+	int NextQuad()const { return (int)IR.size(); }
+	int Emit(const string& op, const string& a1 = "", const string& a2 = "", const string& res = "", int target = -1) {
+		IR.push_back({ op,a1,a2,res,target });
+		return (int)IR.size() - 1;
+	}
+	static inline vector<int> Merge(const vector<int>& a, const vector<int>& b) {
+		vector<int> r = a; r.insert(r.end(), b.begin(), b.end()); return r;
+	}
+	void Backpatch(const vector<int>& lst, int target) {
+		for (int i : lst) {
+			if (i < 0 || i >= (int)IR.size())continue;
+			IR[i].target = target;
+		}
+	}
+
+	// ====== ÓïÒåÖµ£¨°´Ğè×îĞ¡¼¯£©======
+	struct TypeVal { BaseType t = BaseType::ERR; };
+	struct IdVal { string name, pos; };         // Ô­Ê¼±êÊ¶·ûÎÄ±¾ + Î»ÖÃĞÅÏ¢
+	struct NumVal { int v = 0; };
+
+	struct ExprVal { BaseType t = BaseType::ERR; string place; int begin = -1; }; // place=±äÁ¿/ÁÙÊ±/³£Á¿ÎÄ±¾
+	struct BoolVal { vector<int> truelist, falselist; int begin = -1; };
+	struct StmtVal { vector<int> nextlist; int begin = -1; };
+
+	struct OpVal { string op; };               // RelOp
+
+	using SemVal = variant<monostate, TypeVal, IdVal, NumVal, ExprVal, BoolVal, StmtVal, OpVal>;
+	stack<SemVal> ValueStack;
+
+	// ·½±ãÈ¡ variant
+	template<class T>static inline const T& As(const SemVal& v) { return get<T>(v); }
+	template<class T>static inline bool Is(const SemVal& v) { return holds_alternative<T>(v); }
+
+	// ====== ·ûºÅ±í£¨×÷ÓÃÓòÕ»£©======
+	enum class SymKind { VAR, FUNC, PARAM };
+
+	struct Symbol {
+		SymKind kind = SymKind::VAR;
+		BaseType type = BaseType::ERR;           // var/param µÄÀàĞÍ£»func µÄ·µ»ØÀàĞÍ
+		vector<BaseType> params;               // func ²ÎÊıÀàĞÍ
+		string irName;                         // ±äÁ¿Î¨Ò»Ãû£¨±ÜÃâÍ¬ÃûÕÚ±Î»ìÏı£©
+		int scopeLevel = 0;
+	};
+
+	vector<unordered_map<string, Symbol>> Scopes;
+	int uniqId = 0;
+
+	void BeginScope() { Scopes.push_back({}); }
+	void EndScope() {
+		if (Scopes.size() > 1)Scopes.pop_back(); // ÁôÒ»¸öÈ«¾Ö scope
+	}
+
+	Symbol* Lookup(const string& name) {
+		for (int i = (int)Scopes.size() - 1; i >= 0; --i) {
+			auto it = Scopes[i].find(name);
+			if (it != Scopes[i].end())return &it->second;
+		}
+		return nullptr;
+	}
+
+	bool InsertHere(const string& name, const Symbol& sym, string& err) {
+		auto& cur = Scopes.back();
+		if (cur.find(name) != cur.end()) {
+			err = "ÖØ¶¨Òå±êÊ¶·û: " + name;
+			return false;
+		}
+		cur[name] = sym;
+		return true;
+	}
+
+	string NewTemp() { return "t" + to_string(++uniqId); }
+	string NewVarName(const string& raw) { return raw + "@" + to_string((int)Scopes.size() - 1) + "#" + to_string(++uniqId); }
+
+	// ====== º¯ÊıÉÏÏÂÎÄ£¨×îĞ¡»¯£©======
+	bool PendingFunc = false;
+	bool InFunction = false;
+	string CurFuncName;
+	BaseType CurFuncRet = BaseType::ERR;
+	int FuncScopeDepth = 0;
+	vector<pair<string, BaseType>> PendingParams;
+
+	stack<int> PendingIfElseEndJumps; // ´¦Àí if-else£ºÔÚ shift else Ê± emit µÄ ¡°goto end¡± Õ¼Î»
+
+	// ´òÓ¡ IR
+	void DumpIR() const {
+		cout << "\n==== IR quads ====\n";
+		for (int i = 0; i < (int)IR.size(); ++i) {
+			auto& q = IR[i];
+			cout << i << ": (" << q.op;
+			if (q.op == "goto") {
+				cout << ", _, _, " << q.target << ")";
+			}
+			else if (q.op.rfind("if", 0) == 0) {
+				cout << ", " << q.a1 << ", " << q.a2 << ", " << q.target << ")";
+			}
+			else if (q.op == "=") {
+				cout << ", " << q.a1 << ", _, " << q.res << ")";
+			}
+			else {
+				cout << ", " << q.a1 << ", " << q.a2 << ", " << q.res << ")";
+			}
+			cout << "\n";
+		}
+	}
+
+	void DumpSymbols() const {
+		cout << "\n==== Symbol Tables ====\n";
+		for (int i = 0; i < (int)Scopes.size(); ++i) {
+			cout << "-- scope " << i << " --\n";
+			for (auto& [k, v] : Scopes[i]) {
+				cout << k << " kind=" << (v.kind == SymKind::FUNC ? "func" : (v.kind == SymKind::PARAM ? "param" : "var"))
+					<< " type=" << TypeName(v.type) << " ir=" << v.irName << "\n";
+			}
+		}
+	}
+#endif
+
 	const SLRAnalysisTableBuilder& TableBuilder;
 	const GrammarDefinition& Grammar;
 
-	stack<int> StateStack;			  // çŠ¶æ€æ ˆ
-	stack<GrammarSymbol> SymbolStack; // ç¬¦å·æ ˆ
+	stack<int> StateStack;			  // ×´Ì¬Õ»
+	stack<GrammarSymbol> SymbolStack; // ·ûºÅÕ»
 
-	// è¾…åŠ©å‡½æ•°ï¼šæ ¹æ®äº§ç”Ÿå¼IDè·å–äº§ç”Ÿå¼
+	// ¸¨Öúº¯Êı£º¸ù¾İ²úÉúÊ½ID»ñÈ¡²úÉúÊ½
 	const Production& GetProductionById(int prodId) const
 	{
 		for (const auto& prod : Grammar.Productions)
@@ -32,14 +176,14 @@ struct ShiftReduceParser
 				return prod;
 			}
 		}
-		throw runtime_error("æœªæ‰¾åˆ°IDä¸º" + to_string(prodId) + "çš„äº§ç”Ÿå¼");
+		throw runtime_error("Î´ÕÒµ½IDÎª" + to_string(prodId) + "µÄ²úÉúÊ½");
 	}
 
-	// è¾…åŠ©å‡½æ•°ï¼šæ‰“å°å½“å‰æ ˆçŠ¶æ€
+	// ¸¨Öúº¯Êı£º´òÓ¡µ±Ç°Õ»×´Ì¬
 	void PrintStacks() const
 	{
-		// æ‰“å°çŠ¶æ€æ ˆ
-		cout << "çŠ¶æ€æ ˆ: [ ";
+		// ´òÓ¡×´Ì¬Õ»
+		cout << "×´Ì¬Õ»: [ ";
 		stack<int> TempStateStack = StateStack;
 		vector<int> States;
 		while (!TempStateStack.empty())
@@ -53,8 +197,8 @@ struct ShiftReduceParser
 		}
 		cout << "]\n";
 
-		// æ‰“å°ç¬¦å·æ ˆ
-		cout << "ç¬¦å·æ ˆ: [ ";
+		// ´òÓ¡·ûºÅÕ»
+		cout << "·ûºÅÕ»: [ ";
 		stack<GrammarSymbol> TempSymbolStack = SymbolStack;
 		vector<GrammarSymbol> Symbols;
 		while (!TempSymbolStack.empty())
@@ -74,30 +218,36 @@ struct ShiftReduceParser
 		cout << "]\n";
 	}
 
-	// æ„é€ å‡½æ•°
+	// ¹¹Ôìº¯Êı
 	ShiftReduceParser(const SLRAnalysisTableBuilder& tableBuilder)
 		: TableBuilder(tableBuilder), Grammar(tableBuilder.Grammar)
 	{
-		// åˆå§‹åŒ–çŠ¶æ€æ ˆå’Œç¬¦å·æ ˆ
-		StateStack.push(0);							// åˆå§‹çŠ¶æ€ä¸º0
-		SymbolStack.push(GrammarSymbol("$", true)); // æ ˆåº•ç¬¦å·ä¸º$
+		// ³õÊ¼»¯×´Ì¬Õ»ºÍ·ûºÅÕ»
+		StateStack.push(0);							// ³õÊ¼×´Ì¬Îª0
+		SymbolStack.push(GrammarSymbol("$", true)); // Õ»µ×·ûºÅÎª$
+
+#ifdef SEM_IR
+		ValueStack.push(monostate{});
+		Scopes.clear();
+		Scopes.push_back({});
+#endif
 	}
 
-	// è§£æå‡½æ•°ï¼šæ¥æ”¶ç¬¦å·åºåˆ—ï¼Œè¿”å›æ˜¯å¦è§£ææˆåŠŸ
+	// ½âÎöº¯Êı£º½ÓÊÕ·ûºÅĞòÁĞ£¬·µ»ØÊÇ·ñ½âÎö³É¹¦
 	bool Parse(const vector<GrammarSymbol>& inputSymbols)
 	{
-		cout << "å¼€å§‹ç§»è¿›-å½’çº¦åˆ†æã€‚\n";
+		cout << "¿ªÊ¼ÒÆ½ø-¹éÔ¼·ÖÎö¡£\n";
 
 		size_t InputIndex = 0;
 		const GrammarSymbol& EndSymbol = TableBuilder.FFCalculator.EndSymbol;
 
 		while (true)
 		{
-			// è·å–å½“å‰çŠ¶æ€å’Œå½“å‰è¾“å…¥ç¬¦å·
+			// »ñÈ¡µ±Ç°×´Ì¬ºÍµ±Ç°ÊäÈë·ûºÅ
 			int CurrentState = StateStack.top();
 			const GrammarSymbol& CurrentInput = (InputIndex < inputSymbols.size()) ? inputSymbols[InputIndex] : EndSymbol;
 
-			// å¤„ç†IDå’ŒNUM
+			// ´¦ÀíIDºÍNUM
 			GrammarSymbol LookupSymbol = CurrentInput;
 			if (CurrentInput.TokenType == "ID") {
 				LookupSymbol.Name = "id";
@@ -106,19 +256,131 @@ struct ShiftReduceParser
 				LookupSymbol.Name = "num";
 			}
 
-			cout << "\nå½“å‰çŠ¶æ€: " << CurrentState << ", å½“å‰è¾“å…¥ç¬¦å·: " << CurrentInput.Name << "\n";
+			cout << "\nµ±Ç°×´Ì¬: " << CurrentState << ", µ±Ç°ÊäÈë·ûºÅ: " << CurrentInput.Name << "\n";
 			PrintStacks();
 
-			// æŸ¥æ‰¾ACTIONè¡¨
+			// ²éÕÒACTION±í
 			const SLRAction& Action = TableBuilder.GetAction(CurrentState, LookupSymbol);
 
 			if (Action.Type == SLRActionType::SHIFT)
 			{
-				cout << "æ‰§è¡Œç§»è¿›æ“ä½œ: S" << Action.StateOrProduction << "\n";
-				// ç§»è¿›å¤„ç†åçš„ç¬¦å·å’ŒçŠ¶æ€
+				cout << "Ö´ĞĞÒÆ½ø²Ù×÷: S" << Action.StateOrProduction << "\n";
+				
+#ifdef SEM_IR
+				// ====== 0) ´¦Àí shift Ç°ÖÃ¶¯×÷£ºelse ĞèÒªÔÚ¡°½øÈë else Óï¾äÇ°¡±²åÈë goto end£¬²¢»ØÌîÌõ¼ş false Ìø×ª ======
+				if (CurrentInput.Name == "else") {
+					// Õ»Àï´ËÊ±Ó¦ĞÎÈç£º... if ( RelExpr ) Stmt   £¨else »¹Ã»ÈëÕ»£©
+					// È¡×î½üµÄ RelExpr ºÍ then Stmt£ºÖ±½Ó¸´ÖÆÕ»µ½Êı×é×öÄ£Ê½Æ¥Åä£¨×îĞ¡»¯ÊµÏÖ£©
+					auto CopySyms = SymbolStack; vector<GrammarSymbol> syms;
+					auto CopyVals = ValueStack; vector<SemVal> vals;
+					while (!CopySyms.empty()) { syms.push_back(CopySyms.top()); CopySyms.pop(); }
+					while (!CopyVals.empty()) { vals.push_back(CopyVals.top()); CopyVals.pop(); }
+					reverse(syms.begin(), syms.end());
+					reverse(vals.begin(), vals.end());
+
+					// ÕÒ×îºóÒ»¸ö "if ( RelExpr ) Stmt" Ä£Ê½
+					int idx = -1;
+					for (int i = (int)syms.size() - 5; i >= 0; --i) {
+						if (syms[i].Name == "if" && syms[i + 1].Name == "(" && syms[i + 2].Name == "RelExpr" && syms[i + 3].Name == ")" && syms[i + 4].Name == "Stmt") {
+							idx = i; break;
+						}
+					}
+					if (idx != -1 && Is<BoolVal>(vals[idx + 2]) && Is<StmtVal>(vals[idx + 4])) {
+						const auto& B = As<BoolVal>(vals[idx + 2]);
+						const auto& S1 = As<StmtVal>(vals[idx + 4]);
+
+						// 1) then ½áÊøºóÌø¹ı else£ºemit goto _
+						int j = Emit("goto", "", "", "", -1);
+						PendingIfElseEndJumps.push(j);
+
+						// 2) Ìõ¼şÕæÌøµ½ then ¿ªÊ¼
+						Backpatch(B.truelist, S1.begin == -1 ? NextQuad() : S1.begin);
+
+						// 3) Ìõ¼ş¼ÙÌøµ½ else ¿ªÊ¼£¨×¢Òâ£ºelse ¿ªÊ¼Ó¦ÔÚ goto Ö®ºó£©
+						Backpatch(B.falselist, NextQuad()); // NextQuad() ´Ë¿ÌÕıºÃÊÇ else µÚÒ»Ìõ IR µÄÎ»ÖÃ
+					}
+				}
+
+				// ====== 1) º¯ÊıÍ·¼ì²â£º¿´µ½ '(' ÇÒÕ»¶¥ÊÇ id£¬ÏÂÃæÊÇ Type => º¯Êı¶¨Òå¿ªÊ¼£¨Óï·¨ÀïÖ»ÓĞº¯Êı¶¨Òå»áÕâÑù£©:contentReference[oaicite:2]{index=2}
+				if (CurrentInput.Name == "(") {
+					auto tmpSym = SymbolStack; auto tmpVal = ValueStack;
+					GrammarSymbol s1 = tmpSym.top(); tmpSym.pop();
+					GrammarSymbol s2 = tmpSym.top();
+
+					SemVal v1 = tmpVal.top(); tmpVal.pop();
+					SemVal v2 = tmpVal.top();
+
+					if (s1.Name == "id" && s2.Name == "Type" && Is<IdVal>(v1) && Is<TypeVal>(v2) && Scopes.size() == 1) {
+						auto idv = As<IdVal>(v1);
+						auto tv = As<TypeVal>(v2);
+
+						string err;
+						Symbol fs; fs.kind = SymKind::FUNC; fs.type = tv.t; fs.irName = idv.name; fs.scopeLevel = 0;
+						if (!InsertHere(idv.name, fs, err)) {
+							cout << "ÓïÒå´íÎó: " << err << " @ " << idv.pos << "\n";
+							return false;
+						}
+						PendingFunc = true; InFunction = true;
+						CurFuncName = idv.name; CurFuncRet = tv.t;
+						PendingParams.clear();
+						// ÄãÒ²¿ÉÒÔ Emit Ò»¸ö func label£ºEmit("func",CurFuncName,"","")
+					}
+				}
+#endif
+				
+				// ÒÆ½ø´¦ÀíºóµÄ·ûºÅºÍ×´Ì¬
 				SymbolStack.push(LookupSymbol);
 				StateStack.push(Action.StateOrProduction);
-				// ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªè¾“å…¥ç¬¦å·
+
+#ifdef SEM_IR
+				// ====== 3) ÓïÒåÖµÈëÕ»£¨×¢Òâ£ºÓÃ CurrentInput ±£Áô lexeme£©======
+				SemVal pushed = monostate{};
+				if (CurrentInput.TokenType == "ID") {
+					pushed = IdVal{ CurrentInput.Name,CurrentInput.Position };
+				}
+				else if (CurrentInput.TokenType == "NUM") {
+					int x = 0; try { x = stoi(CurrentInput.Name); }
+					catch (...) { x = 0; }
+					pushed = NumVal{ x };
+				}
+				else if (CurrentInput.Name == "int") {
+					pushed = TypeVal{ BaseType::INT };
+				}
+				else if (CurrentInput.Name == "void") {
+					pushed = TypeVal{ BaseType::VOID };
+				}
+				else if (CurrentInput.Name == "<" || CurrentInput.Name == ">" || CurrentInput.Name == "<=" || CurrentInput.Name == ">=" || CurrentInput.Name == "==" || CurrentInput.Name == "!=") {
+					pushed = OpVal{ CurrentInput.Name };
+				}
+				ValueStack.push(pushed);
+
+				// ====== 4) ×÷ÓÃÓò¹ÜÀí£º{ ¿ªĞÂ×÷ÓÃÓò£»} ¹Ø×÷ÓÃÓò£¨×îĞ¡»¯£©:contentReference[oaicite:3]{index=3}
+				if (CurrentInput.Name == "{") {
+					BeginScope();
+					if (PendingFunc) {
+						FuncScopeDepth = (int)Scopes.size();
+						// °Ñ²ÎÊıÕæÕı²åÈëµ½º¯ÊıÌå×÷ÓÃÓò
+						set<string> seen;
+						for (auto& [pname, pt] : PendingParams) {
+							if (seen.count(pname)) { cout << "ÓïÒå´íÎó: ²ÎÊıÖØÃû " << pname << "\n"; return false; }
+							seen.insert(pname);
+							Symbol ps; ps.kind = SymKind::PARAM; ps.type = pt; ps.irName = NewVarName(pname); ps.scopeLevel = (int)Scopes.size() - 1;
+							string err;
+							if (!InsertHere(pname, ps, err)) { cout << "ÓïÒå´íÎó: " << err << "\n"; return false; }
+						}
+						PendingFunc = false;
+					}
+				}
+				else if (CurrentInput.Name == "}") {
+					EndScope();
+					if (InFunction && (int)Scopes.size() < FuncScopeDepth) {
+						// º¯ÊıÌå½áÊø
+						InFunction = false; CurFuncName.clear(); CurFuncRet = BaseType::ERR; FuncScopeDepth = 0;
+					}
+				}
+#endif
+
+				// ÒÆ¶¯µ½ÏÂÒ»¸öÊäÈë·ûºÅ
 				if (CurrentInput != EndSymbol)
 				{
 					InputIndex++;
@@ -126,80 +388,303 @@ struct ShiftReduceParser
 			}
 			else if (Action.Type == SLRActionType::REDUCE)
 			{
-				cout << "æ‰§è¡Œå½’çº¦æ“ä½œ: R" << Action.StateOrProduction << "\n";
-				// æ ¹æ®äº§ç”Ÿå¼IDè·å–äº§ç”Ÿå¼
+				cout << "Ö´ĞĞ¹éÔ¼²Ù×÷: R" << Action.StateOrProduction << "\n";
+				// ¸ù¾İ²úÉúÊ½ID»ñÈ¡²úÉúÊ½
 				const Production& Prod = GetProductionById(Action.StateOrProduction);
-				cout << "ä½¿ç”¨äº§ç”Ÿå¼: " << Prod.ToString() << "\n";
+				cout << "Ê¹ÓÃ²úÉúÊ½: " << Prod.ToString() << "\n";
 
-				// å¦‚æœæ˜¯å¢å¹¿æ–‡æ³•çš„å¼€å§‹äº§ç”Ÿå¼ï¼ˆProgram' -> Programï¼‰
+				// Èç¹ûÊÇÔö¹ãÎÄ·¨µÄ¿ªÊ¼²úÉúÊ½£¨Program' -> Program£©
 				if (Prod.Left.Name == Grammar.StartSymbol.Name)
 				{
-					cout << "\nåˆ†ææˆåŠŸï¼šé€šè¿‡å¢å¹¿äº§ç”Ÿå¼æ¥å—\n";
+					cout << "\n·ÖÎö³É¹¦£ºÍ¨¹ıÔö¹ã²úÉúÊ½½ÓÊÜ\n";
+#ifdef SEM_IR
+					DumpSymbols();
+					DumpIR();
+#endif
 					return true;
 				}
 
-				// å¼¹å‡ºæ ˆä¸­ä¸äº§ç”Ÿå¼å³éƒ¨é•¿åº¦ç›¸ç­‰çš„çŠ¶æ€å’Œç¬¦å·
+#ifdef SEM_IR
+				size_t n = Prod.Right.size();
+				// 1) ÊÕ¼¯ RHS µÄÓïÒåÖµ£¨´ÓÕ»¶¥µ¯³ö n ¸ö£©
+				vector<SemVal> rhs(n);
+				for (int i = (int)n - 1; i >= 0; --i) { rhs[i] = ValueStack.top(); ValueStack.pop(); }
+#endif
+
+				// µ¯³öÕ»ÖĞÓë²úÉúÊ½ÓÒ²¿³¤¶ÈÏàµÈµÄ×´Ì¬ºÍ·ûºÅ
 				for (size_t i = 0; i < Prod.Right.size(); i++)
 				{
 					StateStack.pop();
 					SymbolStack.pop();
 				}
 
-				// è·å–å½’çº¦åçš„å½“å‰çŠ¶æ€
+#ifdef SEM_IR
+				SemVal lhsVal = monostate{};
+
+				auto L = Prod.Left.Name;
+
+				// ---- Type -> int/void Ö±½ÓÍ¸´«£¨Äã shift ÒÑÑ¹ÁË TypeVal£© :contentReference[oaicite:4]{index=4}
+				if (L == "Type") {
+					if (Is<TypeVal>(rhs[0])) lhsVal = rhs[0];
+					else if (Prod.Right[0].Name == "int") lhsVal = TypeVal{ BaseType::INT };
+					else if (Prod.Right[0].Name == "void") lhsVal = TypeVal{ BaseType::VOID };
+				}
+
+				// ---- Parameter -> Type id£º°Ñ²ÎÊıÏÈ¼Çµ½ PendingParams£¨µÈ '{' ÔÙÈë×÷ÓÃÓò£©:contentReference[oaicite:5]{index=5}
+				else if (L == "Parameter") {
+					auto tv = As<TypeVal>(rhs[0]);
+					auto idv = As<IdVal>(rhs[1]);
+					if (tv.t == BaseType::VOID) { cout << "ÓïÒå´íÎó: ²ÎÊı²»ÄÜÊÇ void: " << idv.name << " @ " << idv.pos << "\n"; return false; }
+					PendingParams.push_back({ idv.name,tv.t });
+					lhsVal = monostate{};
+				}
+
+				// ---- Factor -> id/num/(Expr) :contentReference[oaicite:6]{index=6}
+				else if (L == "Factor" && n == 1 && Prod.Right[0].Name == "id") {
+					auto idv = As<IdVal>(rhs[0]);
+					auto* sym = Lookup(idv.name);
+					if (!sym) { cout << "ÓïÒå´íÎó: Ê¹ÓÃÎ´¶¨Òå±êÊ¶·û " << idv.name << " @ " << idv.pos << "\n"; return false; }
+					if (sym->kind == SymKind::FUNC) { cout << "ÓïÒå´íÎó: ÕâÀïĞèÒª±äÁ¿¶ø²»ÊÇº¯Êı " << idv.name << " @ " << idv.pos << "\n"; return false; }
+					lhsVal = ExprVal{ sym->type,sym->irName,-1 };
+				}
+				else if (L == "Factor" && n == 1 && Prod.Right[0].Name == "num") {
+					auto nv = As<NumVal>(rhs[0]);
+					lhsVal = ExprVal{ BaseType::INT,to_string(nv.v),-1 };
+				}
+				else if (L == "Factor" && n == 3 && Prod.Right[0].Name == "(") {
+					lhsVal = rhs[1]; // ( Expr )
+				}
+
+				// ---- Term / Expr£ºËãÊõÀàĞÍ¼ì²é + Éú³ÉÁÙÊ±±äÁ¿Óë IR :contentReference[oaicite:7]{index=7}
+				else if (L == "Term" && n == 3 && (Prod.Right[1].Name == "*" || Prod.Right[1].Name == "/")) {
+					auto a = As<ExprVal>(rhs[0]), b = As<ExprVal>(rhs[2]);
+					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ³Ë³ıÖ»Ö§³Ö int\n"; return false; }
+					string t = NewTemp();
+					int idx = Emit(Prod.Right[1].Name, a.place, b.place, t);
+					int bg = (a.begin != -1) ? a.begin : idx;
+					lhsVal = ExprVal{ BaseType::INT,t,bg };
+				}
+				else if (L == "Term" && n == 1) {
+					lhsVal = rhs[0];
+				}
+				else if (L == "Expr" && n == 3 && (Prod.Right[1].Name == "+" || Prod.Right[1].Name == "-")) {
+					auto a = As<ExprVal>(rhs[0]), b = As<ExprVal>(rhs[2]);
+					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ¼Ó¼õÖ»Ö§³Ö int\n"; return false; }
+					string t = NewTemp();
+					int idx = Emit(Prod.Right[1].Name, a.place, b.place, t);
+					int bg = (a.begin != -1) ? a.begin : idx;
+					lhsVal = ExprVal{ BaseType::INT,t,bg };
+				}
+				else if (L == "Expr" && n == 1) {
+					lhsVal = rhs[0];
+				}
+
+				// ---- RelOp£º°Ñ²Ù×÷·û×Ö·û´®×ö³É OpVal :contentReference[oaicite:8]{index=8}
+				else if (L == "RelOp" && n == 1) {
+					lhsVal = OpVal{ Prod.Right[0].Name };
+				}
+
+				// ---- RelExpr£ºÉú³É if-goto / goto µÄÕ¼Î»²¢»ØÌî :contentReference[oaicite:9]{index=9}
+				else if (L == "RelExpr" && n == 3) {
+					auto a = As<ExprVal>(rhs[0]);
+					auto op = As<OpVal>(rhs[1]).op;
+					auto b = As<ExprVal>(rhs[2]);
+					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ¹ØÏµÔËËãÖ»Ö§³Ö int\n"; return false; }
+					int i = Emit("if" + op, a.place, b.place, "", -1);
+					int j = Emit("goto", "", "", "", -1);
+					lhsVal = BoolVal{ {i},{j},i };
+				}
+				else if (L == "RelExpr" && n == 1) {
+					auto a = As<ExprVal>(rhs[0]);
+					if (a.t != BaseType::INT) { cout << "ÓïÒå´íÎó: Ìõ¼ş±í´ïÊ½ĞèÒª int(·ÇÁãÎªÕæ)\n"; return false; }
+					int i = Emit("ifnz", a.place, "", "", -1);
+					int j = Emit("goto", "", "", "", -1);
+					lhsVal = BoolVal{ {i},{j},i };
+				}
+
+				// ---- DeclarationStatement£º²åÈë·ûºÅ±í + ¿ÉÑ¡³õÊ¼»¯¸³Öµ :contentReference[oaicite:10]{index=10}
+				else if (L == "DeclarationStatement" && (n == 3 || n == 5)) {
+					auto tv = As<TypeVal>(rhs[0]);
+					auto idv = As<IdVal>(rhs[1]);
+					if (tv.t == BaseType::VOID) { cout << "ÓïÒå´íÎó: ±äÁ¿²»ÄÜÊÇ void: " << idv.name << " @ " << idv.pos << "\n"; return false; }
+
+					Symbol vs; vs.kind = SymKind::VAR; vs.type = tv.t; vs.irName = NewVarName(idv.name); vs.scopeLevel = (int)Scopes.size() - 1;
+					string err;
+					if (!InsertHere(idv.name, vs, err)) { cout << "ÓïÒå´íÎó: " << err << " @ " << idv.pos << "\n"; return false; }
+
+					int bg = NextQuad();
+					if (n == 5) {
+						auto e = As<ExprVal>(rhs[3]);
+						if (e.t != tv.t) { cout << "ÓïÒå´íÎó: ³õÊ¼»¯ÀàĞÍ²»Æ¥Åä " << idv.name << "\n"; return false; }
+						int idx = Emit("=", e.place, "", vs.irName);
+						bg = idx;
+					}
+					lhsVal = StmtVal{ {},bg };
+				}
+
+				// ---- AssignmentStatement£ºÎ´¶¨Òå/ÀàĞÍ¼ì²é + Éú³É¸³Öµ IR :contentReference[oaicite:11]{index=11}
+				else if (L == "AssignmentStatement" && n == 4) {
+					auto idv = As<IdVal>(rhs[0]);
+					auto* sym = Lookup(idv.name);
+					if (!sym) { cout << "ÓïÒå´íÎó: ¸³Öµ¸øÎ´¶¨Òå±êÊ¶·û " << idv.name << " @ " << idv.pos << "\n"; return false; }
+					if (sym->kind == SymKind::FUNC) { cout << "ÓïÒå´íÎó: ²»ÄÜ¸øº¯ÊıÃû¸³Öµ " << idv.name << "\n"; return false; }
+					auto e = As<ExprVal>(rhs[2]);
+					if (e.t != sym->type) { cout << "ÓïÒå´íÎó: ¸³ÖµÀàĞÍ²»Æ¥Åä " << idv.name << "\n"; return false; }
+					int idx = Emit("=", e.place, "", sym->irName);
+					lhsVal = StmtVal{ {},idx };
+				}
+
+				// ---- ExprStatement£ºExpr ; »ò ; :contentReference[oaicite:12]{index=12}
+				else if (L == "ExprStatement" && n == 2) {
+					auto e = As<ExprVal>(rhs[0]);
+					lhsVal = StmtVal{ {}, e.begin != -1 ? e.begin : NextQuad() };
+				}
+				else if (L == "ExprStatement" && n == 1) {
+					lhsVal = StmtVal{ {}, NextQuad() };
+				}
+
+				// ---- ReturnStatement£ºreturn/return Expr ÀàĞÍ¼ì²é + emit return :contentReference[oaicite:13]{index=13}
+				else if (L == "ReturnStatement" && (n == 2 || n == 3)) {
+					if (!InFunction) { cout << "ÓïÒå´íÎó: return Ö»ÄÜ³öÏÖÔÚº¯ÊıÄÚ\n"; return false; }
+					int idx = NextQuad();
+					if (n == 2) {
+						if (CurFuncRet != BaseType::VOID) { cout << "ÓïÒå´íÎó: ·Ç void º¯Êı±ØĞë return Ò»¸öÖµ\n"; return false; }
+						idx = Emit("ret");
+					}
+					else {
+						auto e = As<ExprVal>(rhs[1]);
+						if (CurFuncRet != BaseType::INT || e.t != BaseType::INT) { cout << "ÓïÒå´íÎó: return ÀàĞÍ²»Æ¥Åä\n"; return false; }
+						idx = Emit("retv", e.place);
+					}
+					lhsVal = StmtVal{ {},idx };
+				}
+
+				// ---- Stmt / StmtList£ºË³ĞòÁ¬½ÓÊ±»ØÌî nextlist :contentReference[oaicite:14]{index=14}
+				else if (L == "Stmt") {
+					lhsVal = rhs[0]; // Ö±½ÓÍ¸´«
+				}
+				else if (L == "StmtList" && n == 1) {
+					lhsVal = rhs[0];
+				}
+				else if (L == "StmtList" && n == 2) {
+					auto s1 = As<StmtVal>(rhs[0]);
+					auto s2 = As<StmtVal>(rhs[1]);
+					// s1 µÄ¡°Âä¿Õ nextlist¡±½Óµ½ s2 ¿ªÊ¼
+					Backpatch(s1.nextlist, s2.begin == -1 ? NextQuad() : s2.begin);
+					int bg = (s1.begin != -1) ? s1.begin : s2.begin;
+					lhsVal = StmtVal{ s2.nextlist,bg };
+				}
+
+				// ---- CompoundStatement£º{ } »ò { StmtList } :contentReference[oaicite:15]{index=15}
+				else if (L == "CompoundStatement" && n == 2) {
+					lhsVal = StmtVal{ {},NextQuad() };
+				}
+				else if (L == "CompoundStatement" && n == 3) {
+					lhsVal = rhs[1];
+				}
+
+				// ---- SelectionStatement£ºif/if-else£¨if-else µÄÖĞ¼ä goto ÒÑÔÚ shift else ×öÁË£© :contentReference[oaicite:16]{index=16}
+				else if (L == "SelectionStatement" && n == 5) {
+					auto B = As<BoolVal>(rhs[2]);
+					auto S = As<StmtVal>(rhs[4]);
+					Backpatch(B.truelist, S.begin == -1 ? NextQuad() : S.begin);
+					Backpatch(B.falselist, NextQuad());
+					Backpatch(S.nextlist, NextQuad());
+					lhsVal = StmtVal{ {},B.begin };
+				}
+				else if (L == "SelectionStatement" && n == 7) {
+					// if (B) S1 else S2£ºendJump ÔÚ shift else Ê± emit£¬ÕâÀïÖ»°ÑËü»ØÌîµ½ else Ö®ºó
+					auto B = As<BoolVal>(rhs[2]);
+					auto S1 = As<StmtVal>(rhs[4]);
+					auto S2 = As<StmtVal>(rhs[6]);
+
+					if (PendingIfElseEndJumps.empty()) { cout << "ÓïÒå´íÎó: if-else endJump Õ»Îª¿Õ\n"; return false; }
+					int j = PendingIfElseEndJumps.top(); PendingIfElseEndJumps.pop();
+					Backpatch({ j }, NextQuad());
+
+					Backpatch(S1.nextlist, NextQuad());
+					Backpatch(S2.nextlist, NextQuad());
+					lhsVal = StmtVal{ {},B.begin };
+				}
+
+				// ---- IterationStatement£ºwhile (B) S :contentReference[oaicite:17]{index=17}
+				else if (L == "IterationStatement" && n == 5) {
+					auto B = As<BoolVal>(rhs[2]);
+					auto S = As<StmtVal>(rhs[4]);
+					Backpatch(B.truelist, S.begin == -1 ? NextQuad() : S.begin);
+					Backpatch(S.nextlist, B.begin);
+					Emit("goto", "", "", "", B.begin);
+					Backpatch(B.falselist, NextQuad());
+					lhsVal = StmtVal{ {},B.begin };
+				}
+
+				// ÆäËû·ÇÖÕ½á·û£¨Program/GlobalDeclarations/FunctionDefinitions/FunctionDefinition/ParameterListµÈ£©
+				// ×îĞ¡»¯£ºÏÈ²»¶îÍâ×ö IR£¬Ö»Í¸´«»ò¸ø¿ÕÖµ
+				else {
+					// ³£¼ûÍ¸´«£ºA->B
+					if (n == 1) lhsVal = rhs[0];
+					else lhsVal = monostate{};
+				}
+#endif
+
+				// »ñÈ¡¹éÔ¼ºóµÄµ±Ç°×´Ì¬
 				int AfterReduceState = StateStack.top();
 
-				// å‹å…¥äº§ç”Ÿå¼å·¦éƒ¨ç¬¦å·
+				// Ñ¹Èë²úÉúÊ½×ó²¿·ûºÅ
 				SymbolStack.push(Prod.Left);
 
-				// æŸ¥æ‰¾GOTOè¡¨ï¼Œè·å–æ–°çŠ¶æ€
+				// ²éÕÒGOTO±í£¬»ñÈ¡ĞÂ×´Ì¬
 				int GotoState = TableBuilder.GetGoto(AfterReduceState, Prod.Left);
 				if (GotoState == -1)
 				{
-					cout << "é”™è¯¯ï¼šåœ¨çŠ¶æ€" << AfterReduceState << "å¯¹éç»ˆç»“ç¬¦" << Prod.Left.Name << "çš„GOTOæœªæ‰¾åˆ°\n";
+					cout << "´íÎó£ºÔÚ×´Ì¬" << AfterReduceState << "¶Ô·ÇÖÕ½á·û" << Prod.Left.Name << "µÄGOTOÎ´ÕÒµ½\n";
 					return false;
 				}
 
-				// å‹å…¥æ–°çŠ¶æ€
+				// Ñ¹ÈëĞÂ×´Ì¬
 				StateStack.push(GotoState);
+#ifdef SEM_IR
+				ValueStack.push(lhsVal);
+#endif
 			}
 			else if (Action.Type == SLRActionType::ACCEPT)
 			{
-				cout << "\nåˆ†ææˆåŠŸï¼šACCEPT\n";
+				cout << "\n·ÖÎö³É¹¦£ºACCEPT\n";
 				return true;
 			}
 			else
 			{
-				cout << "é”™è¯¯ï¼šåœ¨çŠ¶æ€" << CurrentState << "å¯¹ç¬¦å·" << CurrentInput.Name << "çš„ACTIONæœªæ‰¾åˆ°\n";
+				cout << "´íÎó£ºÔÚ×´Ì¬" << CurrentState << "¶Ô·ûºÅ" << CurrentInput.Name << "µÄACTIONÎ´ÕÒµ½\n";
 				return false;
 			}
-		}
+		} // while loop
 	}
 
-	// è§£æè¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶
+	// ½âÎö´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼ş
 	bool ParseFromFile(const string& tokenFile)
 	{
-		// ä»æ–‡ä»¶ä¸­è¯»å–tokens
+		// ´ÓÎÄ¼şÖĞ¶ÁÈ¡tokens
 		vector<GrammarSymbol> Tokens = LoadTokensFromFile(tokenFile);
 
 		if (Tokens.empty())
 		{
-			cout << "æœªä»æ–‡ä»¶ä¸­è¯»å–åˆ°æœ‰æ•ˆçš„tokens" << endl;
+			cout << "Î´´ÓÎÄ¼şÖĞ¶ÁÈ¡µ½ÓĞĞ§µÄtokens" << endl;
 			return false;
 		}
 
-		// æ‰§è¡Œåˆ†æ
-		cout << "\nä»æ–‡ä»¶ä¸­è¯»å–åˆ°çš„Tokens: ";
+		// Ö´ĞĞ·ÖÎö
+		cout << "\n´ÓÎÄ¼şÖĞ¶ÁÈ¡µ½µÄTokens: ";
 		for (const auto& symbol : Tokens)
 		{
 			cout << symbol.Name << " ";
 		}
 		cout << "\n";
 
-		// è°ƒç”¨Parseå‡½æ•°è¿›è¡Œè§£æ
+		// µ÷ÓÃParseº¯Êı½øĞĞ½âÎö
 		return Parse(Tokens);
 	}
 
-	// ä»è¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶ä¸­è¯»å–tokenså¹¶è½¬æ¢ä¸ºGrammarSymbolå‘é‡
+	// ´Ó´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼şÖĞ¶ÁÈ¡tokens²¢×ª»»ÎªGrammarSymbolÏòÁ¿
 	vector<GrammarSymbol> LoadTokensFromFile(const string& tokenFile)
 	{
 		vector<GrammarSymbol> Tokens;
@@ -208,7 +693,7 @@ struct ShiftReduceParser
 
 		if (!File.is_open())
 		{
-			cerr << "æ— æ³•æ‰“å¼€è¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶: " << tokenFile << endl;
+			cerr << "ÎŞ·¨´ò¿ª´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼ş: " << tokenFile << endl;
 			return Tokens;
 		}
 
@@ -217,17 +702,17 @@ struct ShiftReduceParser
 			istringstream Iss(Line);
 			string TokenTypeStr, Colon, TokenValue, Position;
 
-			// ç±»å‹
+			// ÀàĞÍ
 			if (Iss >> TokenTypeStr)
 			{
-				// å¤„ç†ENDFILE
+				// ´¦ÀíENDFILE
 				if (TokenTypeStr == "ENDFILE")
 				{
-					Iss >> Position; // ä½ç½®
+					Iss >> Position; // Î»ÖÃ
 					continue;
 				}
 
-				// è¯»å–å†’å·å’Œtokenå€¼
+				// ¶ÁÈ¡Ã°ºÅºÍtokenÖµ
 				if (Iss >> Colon && Colon == ":" && Iss >> TokenValue)
 				{
 					Iss >> Position;
