@@ -100,6 +100,9 @@ int main(int argc, char* argv[])
 			if (Success)
 			{
 				cout << "\n移进-归约分析成功！" << endl;
+				
+				// 打印生成的三地址码
+				Parser.PrintThreeAddressCode();
 			}
 			else
 			{
