@@ -11,112 +11,112 @@ using namespace std;
 
 int main(int argc, char* argv[])
 {
-	// ¼ì²éÃüÁîĞĞ²ÎÊıÊıÁ¿
+	// æ£€æŸ¥å‘½ä»¤è¡Œå‚æ•°æ•°é‡
 	if (argc < 3)
 	{
-		cout << "Ê¹ÓÃ·½·¨: " << argv[0] << " <Óï·¨¹æÔòÎÄ¼ş> <TokensÁ÷ÎÄ¼ş>" << endl;
-		cout << "Ê¾Àı: " << argv[0] << " MiniC.grammar MiniCTokensOutput.txt" << endl;
+		cout << "ä½¿ç”¨æ–¹æ³•: " << argv[0] << " <è¯­æ³•è§„åˆ™æ–‡ä»¶> <Tokensæµæ–‡ä»¶>" << endl;
+		cout << "ç¤ºä¾‹: " << argv[0] << " MiniC.grammar MiniCTokensOutput.txt" << endl;
 		return 1;
 	}
 
-	// ´´½¨Óï·¨¼ÓÔØÆ÷
+	// åˆ›å»ºè¯­æ³•åŠ è½½å™¨
 	GrammarLoader Loader;
 
-	// ´ÓÃüÁîĞĞ²ÎÊı»ñÈ¡ÎÄ¼şÂ·¾¶
+	// ä»å‘½ä»¤è¡Œå‚æ•°è·å–æ–‡ä»¶è·¯å¾„
 	string GrammarFile = argv[1];
 	string TokenFile = argv[2];
 
-	// ¼ÓÔØÓï·¨
+	// åŠ è½½è¯­æ³•
 	GrammarDefinition Grammar = Loader.LoadFromFile(GrammarFile);
 
-	// ¼ì²éÊÇ·ñ¼ÓÔØ³É¹¦
+	// æ£€æŸ¥æ˜¯å¦åŠ è½½æˆåŠŸ
 	if (Grammar.Productions.empty())
 	{
 		cout << endl
-			 << "Óï·¨¼ÓÔØÊ§°Ü£¡" << endl;
+			 << "è¯­æ³•åŠ è½½å¤±è´¥ï¼" << endl;
 		return 1;
 	}
 
 	cout << endl
-		 << "Óï·¨¼ÓÔØ³É¹¦£¡" << endl;
+		 << "è¯­æ³•åŠ è½½æˆåŠŸï¼" << endl;
 
-	// ´´½¨FIRST/FOLLOW¼ÆËãÆ÷
-	cout << "\n¼ÆËãFIRSTºÍFOLLOW¼¯ºÏ¡£" << endl;
+	// åˆ›å»ºFIRST/FOLLOWè®¡ç®—å™¨
+	cout << "\nè®¡ç®—FIRSTå’ŒFOLLOWé›†åˆã€‚" << endl;
 	FirstFollowCalculator Calculator(Grammar);
 
-	// ¼ÆËãFIRSTºÍFOLLOW¼¯ºÏ
+	// è®¡ç®—FIRSTå’ŒFOLLOWé›†åˆ
 	Calculator.Calculate();
 
-	// ´òÓ¡FIRST¼¯ºÏ
+	// æ‰“å°FIRSTé›†åˆ
 	Calculator.PrintFirstSets();
 
-	// ´òÓ¡FOLLOW¼¯ºÏ
+	// æ‰“å°FOLLOWé›†åˆ
 	Calculator.PrintFollowSets();
 
-	// ²âÊÔLR(0)×Ô¶¯»ú¹¹½¨Æ÷
-	cout << "\n²âÊÔLR(0)×Ô¶¯»ú¹¹½¨Æ÷" << endl;
+	// æµ‹è¯•LR(0)è‡ªåŠ¨æœºæ„å»ºå™¨
+	cout << "\næµ‹è¯•LR(0)è‡ªåŠ¨æœºæ„å»ºå™¨" << endl;
 
 	try
 	{
-		// ´´½¨LR(0)×Ô¶¯»ú
+		// åˆ›å»ºLR(0)è‡ªåŠ¨æœº
 		LRAutomatonBuilder AutomatonBuilder(Grammar);
 
-		// ´òÓ¡×Ô¶¯»úĞÅÏ¢
-		cout << "LR(0)×Ô¶¯»ú¹¹½¨³É¹¦£¡" << endl;
-		cout << "×Ô¶¯»ú×´Ì¬ÊıÁ¿: " << AutomatonBuilder.States.size() << endl;
+		// æ‰“å°è‡ªåŠ¨æœºä¿¡æ¯
+		cout << "LR(0)è‡ªåŠ¨æœºæ„å»ºæˆåŠŸï¼" << endl;
+		cout << "è‡ªåŠ¨æœºçŠ¶æ€æ•°é‡: " << AutomatonBuilder.States.size() << endl;
 
-		// ´òÓ¡Ôö¹ãÓï·¨ĞÅÏ¢
-		cout << "Ôö¹ãÓï·¨¿ªÊ¼·ûºÅ: " << AutomatonBuilder.AugmentedGrammar.StartSymbol.Name << endl;
+		// æ‰“å°å¢å¹¿è¯­æ³•ä¿¡æ¯
+		cout << "å¢å¹¿è¯­æ³•å¼€å§‹ç¬¦å·: " << AutomatonBuilder.AugmentedGrammar.StartSymbol.Name << endl;
 
-		// ´òÓ¡ËùÓĞ×´Ì¬
+		// æ‰“å°æ‰€æœ‰çŠ¶æ€
 		AutomatonBuilder.PrintAutomaton();
 
-		// ²âÊÔSLR(1)·ÖÎö±íÉú³ÉÆ÷
-		cout << "\n²âÊÔSLR(1)·ÖÎö±íÉú³ÉÆ÷" << endl;
+		// æµ‹è¯•SLR(1)åˆ†æè¡¨ç”Ÿæˆå™¨
+		cout << "\næµ‹è¯•SLR(1)åˆ†æè¡¨ç”Ÿæˆå™¨" << endl;
 
-		// ÎªÔö¹ãÎÄ·¨´´½¨FIRST/FOLLOW¼ÆËãÆ÷
+		// ä¸ºå¢å¹¿æ–‡æ³•åˆ›å»ºFIRST/FOLLOWè®¡ç®—å™¨
 		FirstFollowCalculator AugmentedFF(AutomatonBuilder.AugmentedGrammar);
 		AugmentedFF.Calculate();
 
-		// ´´½¨SLR·ÖÎö±íÉú³ÉÆ÷
+		// åˆ›å»ºSLRåˆ†æè¡¨ç”Ÿæˆå™¨
 		SLRAnalysisTableBuilder SLRTable(AutomatonBuilder, AugmentedFF);
 
-		// ´òÓ¡·ÖÎö±í
-		cout << "SLR(1)·ÖÎö±íÉú³É³É¹¦£¡" << endl;
+		// æ‰“å°åˆ†æè¡¨
+		cout << "SLR(1)åˆ†æè¡¨ç”ŸæˆæˆåŠŸï¼" << endl;
 		SLRTable.PrintTable();
 
-		// ²âÊÔÒÆ½ø-¹éÔ¼·ÖÎöÆ÷
-		cout << "\n²âÊÔÒÆ½ø-¹éÔ¼·ÖÎöÆ÷" << endl;
+		// æµ‹è¯•ç§»è¿›-å½’çº¦åˆ†æå™¨
+		cout << "\næµ‹è¯•ç§»è¿›-å½’çº¦åˆ†æå™¨" << endl;
 
 		try
 		{
-			// ´´½¨·ÖÎöÆ÷ÊµÀı
+			// åˆ›å»ºåˆ†æå™¨å®ä¾‹
 			ShiftReduceParser Parser(SLRTable);
 
-			// ´ÓÎÄ¼ş½âÎö
-			cout << "\n´ÓÎÄ¼şÖĞ½âÎötokens: " << TokenFile << endl;
+			// ä»æ–‡ä»¶è§£æ
+			cout << "\nä»æ–‡ä»¶ä¸­è§£ætokens: " << TokenFile << endl;
 
 			bool Success = Parser.ParseFromFile(TokenFile);
 			if (Success)
 			{
-				cout << "\nÒÆ½ø-¹éÔ¼·ÖÎö³É¹¦£¡" << endl;
-#ifdef SEM_IR
-				Parser.DumpIR();
-#endif
+				cout << "\nç§»è¿›-å½’çº¦åˆ†ææˆåŠŸï¼" << endl;
+				
+				// æ‰“å°ç”Ÿæˆçš„ä¸‰åœ°å€ç 
+				Parser.PrintThreeAddressCode();
 			}
 			else
 			{
-				cout << "\nÒÆ½ø-¹éÔ¼·ÖÎöÊ§°Ü£¡" << endl;
+				cout << "\nç§»è¿›-å½’çº¦åˆ†æå¤±è´¥ï¼" << endl;
 			}
 		}
 		catch (const exception &e)
 		{
-			cout << "ÒÆ½ø-¹éÔ¼·ÖÎö²âÊÔ´íÎó: " << e.what() << endl;
+			cout << "ç§»è¿›-å½’çº¦åˆ†ææµ‹è¯•é”™è¯¯: " << e.what() << endl;
 		}
 	}
 	catch (const exception &e)
 	{
-		cout << "´íÎó: " << e.what() << endl;
+		cout << "é”™è¯¯: " << e.what() << endl;
 		return 1;
 	}
 

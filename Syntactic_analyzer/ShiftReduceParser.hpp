@@ -10,284 +10,41 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
-
-/*
-SEM_IR ºê£ºÓÃÓÚÌõ¼ş±àÒëÓïÒå·ÖÎö + ÖĞ¼ä´úÂë(IR)Éú³ÉÏà¹ØÂß¼­¡£
-- ¹Ø±Õ SEM_IR£º¸ÃÎÄ¼şÖ»×ö´¿ SLR Óï·¨·ÖÎö£¨×´Ì¬Õ»+·ûºÅÕ»£©£¬²»×öÓïÒå¼ì²é/IR Êä³ö¡£
-- ¿ªÆô SEM_IR£ºÔÚ SLR ½âÎöÁ÷³ÌµÄ SHIFT/REDUCE ¶¯×÷ÖĞÍ¬²½Î¬»¤¡°ÓïÒåÖµÕ»(ValueStack)¡±
-	²¢Î¬»¤·ûºÅ±í(Scopes)¡¢IR ËÄÔªÊ½(IR) µÈ¸¨Öú½á¹¹¡£
-*/
-#define SEM_IR
-
-#ifdef SEM_IR
-#include <variant>
-#include <optional>
-#include <set>
-#endif
+#include <ctime>
 
 using namespace std;
 
-// ÒÆ½ø-¹éÔ¼·ÖÎöÆ÷
+// è¯­ä¹‰å±æ€§ï¼šå­˜å‚¨ä¸´æ—¶å˜é‡åã€æ ‡ç­¾ç­‰
+struct SemanticAttribute
+{
+	string Value;  // å€¼ï¼ˆä¸´æ—¶å˜é‡åã€æ ‡ç­¾åã€å˜é‡åç­‰ï¼‰
+	string Type;   // ç±»å‹ï¼ˆ"temp", "label", "var", "num", "stmt_start"ç­‰ï¼‰
+	int CodeStartPos; // ä»£ç èµ·å§‹ä½ç½®ï¼ˆç”¨äºStmtï¼‰
+	string Expr1;  // è¡¨è¾¾å¼1ï¼ˆç”¨äºRelExprï¼‰
+	string Expr2;  // è¡¨è¾¾å¼2ï¼ˆç”¨äºRelExprï¼‰
+	string Op;     // è¿ç®—ç¬¦ï¼ˆç”¨äºRelExprï¼‰
+
+	SemanticAttribute(const string& val = "", const string& type = "", int codeStart = -1,
+		const string& expr1 = "", const string& expr2 = "", const string& op = "")
+		: Value(val), Type(type), CodeStartPos(codeStart), Expr1(expr1), Expr2(expr2), Op(op) {
+	}
+};
+
+// ç§»è¿›-å½’çº¦åˆ†æå™¨
 struct ShiftReduceParser
 {
-
-#ifdef SEM_IR
-	// ====== ×îĞ¡»¯ÓïÒåÀàĞÍÏµÍ³ ======
-
-	// BaseType£ºÓïÒå·ÖÎö½×¶ÎÊ¹ÓÃµÄ¡°¾²Ì¬ÀàĞÍ¡±Ã¶¾Ù£¬ÓÃÓÚÀàĞÍ¼ì²éÓë·ûºÅ±í¼ÇÂ¼¡£
-	// - INT/VOID/BOOL£ºÊ¾ÀıÓïÑÔ×î³£¼ûµÄ¼¸ÖÖÀàĞÍ
-	// - ERR£ºÓïÒåÍÆ¶ÏÊ§°Ü/´íÎó´«²¥Ê±µÄÕ¼Î»ÀàĞÍ
-	enum class BaseType { INT, VOID, BOOL, ERR };
-	// ½« BaseType ×ª³É¿É¶Á×Ö·û´®£¬±ãÓÚ±¨´íÓëµ÷ÊÔÊä³ö¡£
-	static inline const char* TypeName(BaseType t) {
-		switch (t) {
-			case BaseType::INT:return "int";
-			case BaseType::VOID:return "void";
-			case BaseType::BOOL:return "bool";
-			default:return "err";
-		}
-	}
-
-	// ====== ÈıµØÖ·/ËÄÔªÊ½ IR ======
-	/*
-	Quad£ºÖĞ¼ä´úÂëµÄÒ»¸ö¡°ËÄÔªÊ½¡±µ¥Ôª£¬³£ÓÃÓÚÈıµØÖ·Âë±íÊ¾¡£
-	- op£º²Ù×÷·û£¨ÀıÈç "+", "*", "=", "goto", "if<", "ret" µÈ£©
-	- a1/a2£º²Ù×÷Êı£¨¿ÉÄÜÊÇ±äÁ¿Î¨Ò»Ãû¡¢ÁÙÊ±±äÁ¿¡¢³£Á¿×ÖÃæÁ¿µÈ£©
-	- res£º½á¹ûÎ»ÖÃ£¨Ä¿µÄ±äÁ¿/ÁÙÊ±±äÁ¿Ãû£»¶Ô if/goto ¿É²»Ê¹ÓÃ£©
-	- target£ºÌø×ªÄ¿±êµØÖ·£¨ÓÃÓÚ goto / ifxxx£©£¬-1 ±íÊ¾¡°Õ¼Î»¡±£¬ĞèÒªºóĞø backpatch Ìî³ä
-	*/
-	struct Quad {
-		string op, a1, a2, res;
-		int target = -1; // goto/if µÄÄ¿±ê£¬-1 ±íÊ¾Õ¼Î»
-	};
-	// IR£ºË³Ğò±£´æÕû¸ö³ÌĞò²úÉúµÄËÄÔªÊ½ÁĞ±í£»NextQuad() ¼´¡°ÏÂÒ»ÌõÖ¸ÁîµØÖ·¡±¡£
-	vector<Quad> IR;
-
-	// nextquad£º·µ»Øµ±Ç° IR ³¤¶È£¬¼´ÏÂÒ»Ìõ½«Òª emit µÄÖ¸ÁîÏÂ±ê¡£
-	int NextQuad()const { return (int)IR.size(); }
-	/*
-	Emit£º×·¼ÓÒ»ÌõËÄÔªÊ½µ½ IR£¬²¢·µ»ØÆäÏÂ±ê¡£
-	- ÓïÒå¶¯×÷£¨reduce£©ÖĞ»áÆµ·±µ÷ÓÃ£º±í´ïÊ½Éú³É¡¢¸³Öµ¡¢Ìø×ªÕ¼Î»µÈ¡£
-	- target Ä¬ÈÏÎª -1£¬±íÊ¾¸ÃËÄÔªÊ½¿ÉÄÜĞèÒª»ØÌîÌø×ªÄ¿±ê¡£
-	*/
-	int Emit(const string& op, const string& a1 = "", const string& a2 = "", const string& res = "", int target = -1) {
-		IR.push_back({ op,a1,a2,res,target });
-		return (int)IR.size() - 1;
-	}
-	/*
-	Merge£º»ØÌî(list)ºÏ²¢¹¤¾ß¡£
-	ÔÚ¾­µä backpatching ÖĞ truelist/falselist/nextlist ¶¼ÊÇ¡°Î´¾öÌø×ª¡±µÄÖ¸ÁîÏÂ±ê¼¯ºÏ£¬
-	ĞèÒªÔÚ¹éÔ¼Ê±ºÏ²¢ÁĞ±í¡£
-	*/
-	static inline vector<int> Merge(const vector<int>& a, const vector<int>& b) {
-		vector<int> r = a; r.insert(r.end(), b.begin(), b.end()); return r;
-	}
-	/*
-	Backpatch£º»ØÌîº¯Êı£¬½« lst ÖĞ¼ÇÂ¼µÄËÄÔªÊ½Ìø×ªÄ¿±êÍ³Ò»Ìî³É target¡£
-	Ê¹ÓÃ³¡¾°£º
-	- if Ìõ¼şÎªÕæ -> Ìøµ½ then µÄÈë¿Ú
-	- if Ìõ¼şÎª¼Ù -> Ìøµ½ else µÄÈë¿Ú»ò if ºóµÄÎ»ÖÃ
-	- while Ìõ¼şÎªÕæ -> Ìøµ½Ñ­»·Ìå£»Îª¼Ù -> Ìø³öÑ­»·
-	*/
-	void Backpatch(const vector<int>& lst, int target) {
-		for (int i : lst) {
-			if (i < 0 || i >= (int)IR.size())continue;
-			IR[i].target = target;
-		}
-	}
-
-	// ====== ÓïÒåÖµ£¨°´Ğè×îĞ¡¼¯£©======
-	/*
-	ÓïÒåÖµ(semantic value)£ºÓë SymbolStack ÖĞÃ¿¸öÓï·¨·ûºÅ¡°Ò»Ò»¶ÔÆë¡±µÄÊôĞÔ¼ÇÂ¼¡£
-	ÔÚ SLR/LR ÖĞ£¬ÓïÒå¶¯×÷Í¨³£ÔÚ REDUCE Ê±Ö´ĞĞ£º
-	- ´Ó ValueStack µ¯³ö RHS µÄÓïÒåÖµÊı×é rhs[]
-	- ¼ÆËã LHS µÄÓïÒåÖµ lhsVal
-	- ½« lhsVal ÔÙÑ¹»Ø ValueStack£¬±£³ÖÓë·ûºÅÕ»Í¬²½
-	*/
-
-	// TypeVal£ºÓÃÓÚ·ÇÖÕ½á·û Type µÄ×ÛºÏÊôĞÔ£¨ÀıÈç "int" / "void"£©
-	struct TypeVal { BaseType t = BaseType::ERR; };
-	// IdVal£ºÓÃÓÚÖÕ½á·û id µÄÓïÒåÖµ
-	// - name£º±£ÁôÔ­Ê¼ lexeme£¨ÀıÈç "x"£©£¬²»ÄÜÓÃ LookupSymbol.Name£¨ÄÇ»á±»¸Ä³É "id"£©
-	// - pos£ºÎ»ÖÃĞÅÏ¢£¨ÓÃÓÚ±¨´í¶¨Î»£©
-	struct IdVal { string name, pos; };
-	// NumVal£ºÓÃÓÚÖÕ½á·û num µÄÓïÒåÖµ£¨±£´æÕûĞÍ³£Á¿Öµ£©
-	struct NumVal { int v = 0; };
-	/*
-	ExprVal£º±í´ïÊ½×ÛºÏÊôĞÔ
-	- t£º±í´ïÊ½¾²Ì¬ÀàĞÍ£¨ÓÃÓÚËãÊõ/¸³Öµ/return µÈÀàĞÍ¼ì²é£©
-	- place£º±í´ïÊ½½á¹û¡°·ÅÔÚÄÄÀï¡±
-	  ¿ÉÄÜÊÇ£º
-		1) ±äÁ¿µÄÎ¨Ò»Ãû£¨Symbol.irName£©
-		2) ÁÙÊ±±äÁ¿Ãû£¨t1,t2,...£©
-		3) ³£Á¿×ÖÃæÁ¿×Ö·û´®£¨ÀıÈç "123"£©
-	- begin£º¸Ã±í´ïÊ½¶ÔÓ¦ IR µÄ¡°ÆğÊ¼Ö¸ÁîµØÖ·¡±£¬ÓÃÓÚ¿ØÖÆÁ÷Æ´½ÓÊ±ÖªµÀÈë¿ÚÎ»ÖÃ
-	*/
-	struct ExprVal { BaseType t = BaseType::ERR; string place; int begin = -1; };
-	/*
-	BoolVal£º²¼¶û±í´ïÊ½£¨ÕâÀïÓÃ¡°¿ØÖÆÁ÷±íÊ¾·¨¡±¶ø·ÇÖ±½Ó¼ÆËã true/false£©
-	- truelist£ºÌõ¼şÎªÕæÊ±Ìø×ªÖ¸ÁîµÄÕ¼Î»¼¯ºÏ
-	- falselist£ºÌõ¼şÎª¼ÙÊ±Ìø×ªÖ¸ÁîµÄÕ¼Î»¼¯ºÏ
-	- begin£º¸ÃÌõ¼şÅĞ¶Ï IR µÄÈë¿ÚÎ»ÖÃ
-	*/
-	struct BoolVal { vector<int> truelist, falselist; int begin = -1; };
-	/*
-	StmtVal£ºÓï¾ä×ÛºÏÊôĞÔ
-	- nextlist£ºÓï¾äÖ´ĞĞÍêºóĞèÒªÌø×ªµ«ÉĞÎ´È·¶¨Ä¿±êµÄ goto Õ¼Î»¼¯ºÏ
-	  £¨Ë³ĞòÓï¾äÆ´½Ó/¿ØÖÆÁ÷½á¹¹ÊÕÎ²Ê±³£ÓÃ£©
-	- begin£º¸ÃÓï¾ä¶ÔÓ¦ IR µÄÈë¿ÚÎ»ÖÃ
-	*/
-	struct StmtVal { vector<int> nextlist; int begin = -1; };
-	// OpVal£º¹ØÏµÔËËã·û RelOp µÄÓïÒåÖµ£¨±£´æ "<", ">=", "==" µÈ×Ö·û´®£©
-	struct OpVal { string op; };
-	/*
-	SemVal£ºÍ³Ò»µÄ¡°ÓïÒåÖµÔØÌå¡±£¬Ê¹ÓÃ std::variant ÈÃ²»Í¬·ûºÅ³ĞÔØ²»Í¬×Ö¶Î¡£
-	- monostate£ºÕ¼Î»ÀàĞÍ£¬±íÊ¾¸Ã·ûºÅÔİÊ±²»Ğ¯´øÓïÒåÊôĞÔ£¨ÀıÈç ";"¡¢"("¡¢")" µÈ£©
-	*/
-	using SemVal = variant<monostate, TypeVal, IdVal, NumVal, ExprVal, BoolVal, StmtVal, OpVal>;
-	/*
-	ValueStack£ºÓïÒåÖµÕ»£¬Óë SymbolStack Í¬²½£¨¶ÔÆë¹æÔò·Ç³£ÖØÒª£¡£©
-	- SHIFT£ºÑ¹ÈëÖÕ½á·û¶ÔÓ¦µÄÓïÒåÖµ£¨id/num/type/op¡­£©£¬ÒÔ¼°·ûºÅÕ»Ñ¹ÈëµÄ LookupSymbol
-	- REDUCE£ºµ¯³ö RHS ¸öÓïÒåÖµ£¬¼ÆËã LHS ÓïÒåÖµÔÙÑ¹»Ø
-	*/
-	stack<SemVal> ValueStack;
-
-	// ·½±ãÈ¡ variant£ºAs<T>(v) »ñÈ¡£¬Is<T>(v) ÅĞ¶ÏÀàĞÍ
-	template<class T>static inline const T& As(const SemVal& v) { return get<T>(v); }
-	template<class T>static inline bool Is(const SemVal& v) { return holds_alternative<T>(v); }
-
-	// ====== ·ûºÅ±í£¨×÷ÓÃÓòÕ»£©======
-
-	/*
-	SymKind£º·ûºÅÖÖÀà
-	- VAR£º±äÁ¿
-	- FUNC£ºº¯Êı£¨ÕâÀï½ö¼ÇÂ¼·µ»ØÀàĞÍ/Ãû×Ö£»²ÎÊıÀàĞÍ¿ÉÀ©Õ¹£©
-	- PARAM£º²ÎÊı£¨ÊôÓÚº¯ÊıÌåµÄ¾Ö²¿·ûºÅ£©
-	*/
-	enum class SymKind { VAR, FUNC, PARAM };
-	/*
-	Symbol£º·ûºÅ±íÌõÄ¿
-	- kind£º·ûºÅÖÖÀà
-	- type£º±äÁ¿/²ÎÊıÀàĞÍ£»º¯Êı·µ»ØÀàĞÍ
-	- params£ºº¯Êı²ÎÊıÀàĞÍ£¨±¾×îĞ¡ÊµÏÖÀï½ö×öÕ¼Î»£¬²ÎÊıÏÈ´æÔÚ PendingParams£©
-	- irName£º±äÁ¿Î¨Ò»Ãû£¨½â¾öÕÚ±Î/Í¬ÃûÎÊÌâ£»IR ÖĞÊ¹ÓÃ irName ²»»á»ìÏı£©
-	- scopeLevel£ºËùÔÚ×÷ÓÃÓò²ã¼¶£¨µ÷ÊÔ/±¨´íÓÃ£©
-	*/
-	struct Symbol {
-		SymKind kind = SymKind::VAR;
-		BaseType type = BaseType::ERR;
-		vector<BaseType> params;
-		string irName;
-		int scopeLevel = 0;
-	};
-	/*
-	Scopes£º×÷ÓÃÓòÕ»£¨Ã¿²ãÒ»¸ö hash ±í£ºname -> Symbol£©
-	- BeginScope£ºÓöµ½ '{' ½øÈëĞÂ¿é×÷ÓÃÓò
-	- EndScope£ºÓöµ½ '}' ÍË³ö×÷ÓÃÓò
-	ËµÃ÷£ºÕâÀïÖ»±£ÁôÒ»¸öÈ«¾Ö scope£¨Scopes.size()>1 ²Å pop£©£¬±ÜÃâ¿ÕÕ»¡£
-	*/
-	vector<unordered_map<string, Symbol>> Scopes;
-	// uniqId£ºÓÃÓÚÉú³ÉÁÙÊ±±äÁ¿Ãû/±äÁ¿Î¨Ò»Ãû£¬±£Ö¤²»³åÍ»
-	int uniqId = 0;
-
-	void BeginScope() { Scopes.push_back({}); }
-	void EndScope() {
-		if (Scopes.size() > 1)Scopes.pop_back(); // ÁôÒ»¸öÈ«¾Ö scope
-	}
-
-	/*
-	Lookup£º´ÓÄÚµ½Íâ²éÕÒ±êÊ¶·û£¬·µ»Ø×î½ü×÷ÓÃÓòÖĞµÄ·ûºÅÌõÄ¿¡£
-	ÓÃÍ¾£º¼ì²â¡°Ê¹ÓÃÎ´¶¨Òå±êÊ¶·û¡±¡¢»ñÈ¡ÀàĞÍ¡¢»ñÈ¡ irName ÓÃÓÚÉú³É IR¡£
-	*/
-	Symbol* Lookup(const string& name) {
-		for (int i = (int)Scopes.size() - 1; i >= 0; --i) {
-			auto it = Scopes[i].find(name);
-			if (it != Scopes[i].end())return &it->second;
-		}
-		return nullptr;
-	}
-
-	/*
-	InsertHere£º½öÔÚµ±Ç°×÷ÓÃÓò²åÈë·ûºÅ¡£
-	ÓÃÍ¾£º¼ì²â¡°Í¬Ò»×÷ÓÃÓòÖØ¶¨Òå¡±£»ÔÊĞíÍâ²ãÍ¬ÃûÔÚÄÚ²ãÕÚ±Î£¨shadowing£©¡£
-	*/
-	bool InsertHere(const string& name, const Symbol& sym, string& err) {
-		auto& cur = Scopes.back();
-		if (cur.find(name) != cur.end()) {
-			err = "ÖØ¶¨Òå±êÊ¶·û: " + name;
-			return false;
-		}
-		cur[name] = sym;
-		return true;
-	}
-
-	// NewTemp£ºÉú³ÉÒ»¸öĞÂµÄÁÙÊ±±äÁ¿Ãû£¬ÓÃÓÚ±í´ïÊ½¼ÆËã½á¹û±£´æ
-	string NewTemp() { return "t" + to_string(++uniqId); }
-	// NewVarName£ºÎª±äÁ¿/²ÎÊıÉú³ÉÒ»¸öÎ¨Ò»Ãû£¨°üº¬ scopeLevel ºÍĞòºÅ£©
-	// ÕâÑù IR ÖĞÊ¹ÓÃ irName£¬¿ÉÒÔ±ÜÃâ¿é×÷ÓÃÓòÍ¬Ãû±äÁ¿³åÍ»¡£
-	string NewVarName(const string& raw) { return raw + "@" + to_string((int)Scopes.size() - 1) + "#" + to_string(++uniqId); }
-
-	// ====== º¯ÊıÉÏÏÂÎÄ£¨×îĞ¡»¯£©======
-	/*
-	ÓÉÓÚÓï·¨¶¯×÷ÔÚ SHIFT/REDUCE µÄÄ³Ğ©Ê±¿Ì´¥·¢£¬¶øº¯Êı¶¨ÒåÉæ¼°¡°ÏÈ¿´µ½·µ»ØÀàĞÍ+º¯ÊıÃû+²ÎÊıÁĞ±í£¬
-	ÔÙÓöµ½ '{' ²Å½øÈëº¯ÊıÌå×÷ÓÃÓò¡±£¬Òò´ËĞèÒªÒ»×é¡°¿ç²½ÖèµÄÁÙÊ±×´Ì¬¡±±£´æÉÏÏÂÎÄ¡£
-	*/
-
-	bool PendingFunc = false; // ÒÑÊ¶±ğµ½º¯ÊıÍ·£¨Type id '('£©£¬µ«»¹Ã»Óöµ½ '{' ½¨º¯ÊıÌå×÷ÓÃÓò
-	bool InFunction = false; // µ±Ç°ÊÇ·ñÔÚº¯ÊıÌåÄÚ²¿£¨ÓÃÓÚ return ºÏ·¨ĞÔ¼ì²é£©
-	string CurFuncName; // µ±Ç°º¯ÊıÃû£¨¿ÉÓÃÓÚ±¨´í/Éú³É±êÇ©£©
-	BaseType CurFuncRet = BaseType::ERR; // µ±Ç°º¯Êı·µ»ØÀàĞÍ
-	int FuncScopeDepth = 0; // ÓÃÓÚÅĞ¶Ïº¯ÊıÌå½áÊø£º×÷ÓÃÓòµ¯³öµ½Ğ¡ÓÚ¸ÃÖµÊ±¼´º¯Êı½áÊø
-	vector<pair<string, BaseType>> PendingParams; // ²ÎÊıÔÚ²ÎÊıÁĞ±í¹éÔ¼Ê±ÊÕ¼¯£¬µÈ½øÈë '{' ºóÔÙ²åÈëµ½×÷ÓÃÓò
-	/*
-	PendingIfElseEndJumps£º´¦Àí if-else µÄÒ»¸ö¡°×îĞ¡»¯ hack¡±£º
-	- ÔÚ SHIFT µ½ else Ö®Ç°£¬ÏÈ emit Ò»¸ö "goto _" ÓÃÀ´Ìø¹ı else£¨then ·ÖÖ§½áÊøÌøµ½ if-else Ä©Î²£©
-	- Õâ¸ö goto µÄÏÂ±êĞèÒª¿çÔ½Èô¸É´Î shift/reduce ±£´æ£¬Ö±µ½ else Óï¾ä¹éÔ¼Íê³Éºó²ÅÄÜ backpatch µ½ end
-	*/
-	stack<int> PendingIfElseEndJumps;
-
-	// ´òÓ¡ IR
-	void DumpIR() const {
-		cout << "\n==== IR quads ====\n";
-		for (int i = 0; i < (int)IR.size(); ++i) {
-			auto& q = IR[i];
-			cout << i << ": (" << q.op;
-			if (q.op == "goto") {
-				cout << ", _, _, " << q.target << ")";
-			}
-			else if (q.op.rfind("if", 0) == 0) {
-				cout << ", " << q.a1 << ", " << q.a2 << ", " << q.target << ")";
-			}
-			else if (q.op == "=") {
-				cout << ", " << q.a1 << ", _, " << q.res << ")";
-			}
-			else {
-				cout << ", " << q.a1 << ", " << q.a2 << ", " << q.res << ")";
-			}
-			cout << "\n";
-		}
-	}
-
-	// ´òÓ¡·ûºÅ±í£ºÓÃÓÚ¼ì²é×÷ÓÃÓò/ÖØ¶¨Òå/Î¨Ò»ÃûÉú³ÉÊÇ·ñ·ûºÏÔ¤ÆÚ
-	void DumpSymbols() const {
-		cout << "\n==== Symbol Tables ====\n";
-		for (int i = 0; i < (int)Scopes.size(); ++i) {
-			cout << "-- scope " << i << " --\n";
-			for (auto& [k, v] : Scopes[i]) {
-				cout << k << " kind=" << (v.kind == SymKind::FUNC ? "func" : (v.kind == SymKind::PARAM ? "param" : "var"))
-					<< " type=" << TypeName(v.type) << " ir=" << v.irName << "\n";
-			}
-		}
-	}
-#endif
-
 	const SLRAnalysisTableBuilder& TableBuilder;
 	const GrammarDefinition& Grammar;
 
-	stack<int> StateStack;			  // ×´Ì¬Õ»
-	stack<GrammarSymbol> SymbolStack; // ·ûºÅÕ»
+	stack<int> StateStack;			  // çŠ¶æ€æ ˆ
+	stack<GrammarSymbol> SymbolStack; // ç¬¦å·æ ˆ
+	stack<SemanticAttribute> SemanticStack; // è¯­ä¹‰æ ˆ
 
-	// ¸¨Öúº¯Êı£º¸ù¾İ²úÉúÊ½ID»ñÈ¡²úÉúÊ½
+	vector<string> ThreeAddressCode;  // ä¸‰åœ°å€ç åˆ—è¡¨
+	int TempVarCounter;               // ä¸´æ—¶å˜é‡è®¡æ•°å™¨
+	int LabelCounter;                  // æ ‡ç­¾è®¡æ•°å™¨
+
+	// è¾…åŠ©å‡½æ•°ï¼šæ ¹æ®äº§ç”Ÿå¼IDè·å–äº§ç”Ÿå¼
 	const Production& GetProductionById(int prodId) const
 	{
 		for (const auto& prod : Grammar.Productions)
@@ -297,14 +54,14 @@ struct ShiftReduceParser
 				return prod;
 			}
 		}
-		throw runtime_error("Î´ÕÒµ½IDÎª" + to_string(prodId) + "µÄ²úÉúÊ½");
+		throw runtime_error("æœªæ‰¾åˆ°IDä¸º" + to_string(prodId) + "çš„äº§ç”Ÿå¼");
 	}
 
-	// ¸¨Öúº¯Êı£º´òÓ¡µ±Ç°Õ»×´Ì¬
+	// è¾…åŠ©å‡½æ•°ï¼šæ‰“å°å½“å‰æ ˆçŠ¶æ€
 	void PrintStacks() const
 	{
-		// ´òÓ¡×´Ì¬Õ»
-		cout << "×´Ì¬Õ»: [ ";
+		// æ‰“å°çŠ¶æ€æ ˆ
+		cout << "çŠ¶æ€æ ˆ: [ ";
 		stack<int> TempStateStack = StateStack;
 		vector<int> States;
 		while (!TempStateStack.empty())
@@ -318,8 +75,8 @@ struct ShiftReduceParser
 		}
 		cout << "]\n";
 
-		// ´òÓ¡·ûºÅÕ»
-		cout << "·ûºÅÕ»: [ ";
+		// æ‰“å°ç¬¦å·æ ˆ
+		cout << "ç¬¦å·æ ˆ: [ ";
 		stack<GrammarSymbol> TempSymbolStack = SymbolStack;
 		vector<GrammarSymbol> Symbols;
 		while (!TempSymbolStack.empty())
@@ -339,41 +96,589 @@ struct ShiftReduceParser
 		cout << "]\n";
 	}
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	ShiftReduceParser(const SLRAnalysisTableBuilder& tableBuilder)
-		: TableBuilder(tableBuilder), Grammar(tableBuilder.Grammar)
+		: TableBuilder(tableBuilder), Grammar(tableBuilder.Grammar),
+		TempVarCounter(0), LabelCounter(0)
 	{
-		// ³õÊ¼»¯×´Ì¬Õ»ºÍ·ûºÅÕ»
-		StateStack.push(0);							// ³õÊ¼×´Ì¬Îª0
-		SymbolStack.push(GrammarSymbol("$", true)); // Õ»µ×·ûºÅÎª$
-
-#ifdef SEM_IR
-		// ÓïÒåÖµÕ»±ØĞëÓë·ûºÅÕ»±£³ÖÑÏ¸ñ¶ÔÆë£º
-		// - ·ûºÅÕ»µ×ÒÑ¾­Ñ¹ÁË "$"
-		// - Òò´ËÓïÒåÖµÕ»Ò²Ñ¹Ò»¸ö monostate Õ¼Î»£¬Óë "$" ¶ÔÆë
-		ValueStack.push(monostate{});
-
-		// ³õÊ¼»¯È«¾Ö×÷ÓÃÓò£¨Scopes[0]£©£¬ºóĞøÓöµ½ '{' ÔÙ BeginScope() ½øÈë¿é×÷ÓÃÓò
-		Scopes.clear();
-		Scopes.push_back({});
-#endif
+		// åˆå§‹åŒ–çŠ¶æ€æ ˆå’Œç¬¦å·æ ˆ
+		StateStack.push(0);							// åˆå§‹çŠ¶æ€ä¸º0
+		SymbolStack.push(GrammarSymbol("$", true)); // æ ˆåº•ç¬¦å·ä¸º$
+		SemanticStack.push(SemanticAttribute("$", "marker")); // è¯­ä¹‰æ ˆåº•æ ‡è®°
 	}
 
-	// ½âÎöº¯Êı£º½ÓÊÕ·ûºÅĞòÁĞ£¬·µ»ØÊÇ·ñ½âÎö³É¹¦
+	// ç”Ÿæˆæ–°çš„ä¸´æ—¶å˜é‡å
+	string NewTemp()
+	{
+		return "t" + to_string(TempVarCounter++);
+	}
+
+	// ç”Ÿæˆæ–°çš„æ ‡ç­¾å
+	string NewLabel()
+	{
+		return "L" + to_string(LabelCounter++);
+	}
+
+	// æ·»åŠ ä¸‰åœ°å€ç 
+	void EmitCode(const string& code)
+	{
+		if (!code.empty())
+		{
+			ThreeAddressCode.push_back(code);
+		}
+	}
+
+	// åœ¨æŒ‡å®šä½ç½®æ’å…¥ä»£ç 
+	void InsertCodeAt(size_t pos, const string& code)
+	{
+		if (!code.empty() && pos <= ThreeAddressCode.size())
+		{
+			ThreeAddressCode.insert(ThreeAddressCode.begin() + pos, code);
+		}
+	}
+
+	// ç”Ÿæˆä¸‰åœ°å€ç ï¼šæ ¹æ®äº§ç”Ÿå¼ID
+	// æ³¨æ„ï¼šè°ƒç”¨æ­¤å‡½æ•°æ—¶ï¼Œè¯­ä¹‰æ ˆä¸­å·²ç»åŒ…å«äº†äº§ç”Ÿå¼å³éƒ¨æ‰€æœ‰ç¬¦å·çš„å±æ€§ï¼ˆæŒ‰ä»å³åˆ°å·¦çš„é¡ºåºï¼‰
+	void GenerateCode(int prodId, const Production& prod)
+	{
+		// è¡¨è¾¾å¼ï¼šExpr -> Expr + Term
+		if (prod.Left.Name == "Expr" && prod.Right.size() == 3 && prod.Right[1].Name == "+")
+		{
+			SemanticAttribute term = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute op = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			string temp = NewTemp();
+			EmitCode(temp + " = " + expr.Value + " + " + term.Value);
+			SemanticStack.push(SemanticAttribute(temp, "temp"));
+		}
+		// è¡¨è¾¾å¼ï¼šExpr -> Expr - Term
+		else if (prod.Left.Name == "Expr" && prod.Right.size() == 3 && prod.Right[1].Name == "-")
+		{
+			SemanticAttribute term = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute op = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			string temp = NewTemp();
+			EmitCode(temp + " = " + expr.Value + " - " + term.Value);
+			SemanticStack.push(SemanticAttribute(temp, "temp"));
+		}
+		// è¡¨è¾¾å¼ï¼šExpr -> Term
+		else if (prod.Left.Name == "Expr" && prod.Right.size() == 1 && prod.Right[0].Name == "Term")
+		{
+			// ç›´æ¥ä¼ é€’å±æ€§ï¼Œè¯­ä¹‰æ ˆä¸å˜
+		}
+		// é¡¹ï¼šTerm -> Term * Factor
+		else if (prod.Left.Name == "Term" && prod.Right.size() == 3 && prod.Right[1].Name == "*")
+		{
+			SemanticAttribute factor = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute op = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute term = SemanticStack.top(); SemanticStack.pop();
+			string temp = NewTemp();
+			EmitCode(temp + " = " + term.Value + " * " + factor.Value);
+			SemanticStack.push(SemanticAttribute(temp, "temp"));
+		}
+		// é¡¹ï¼šTerm -> Term / Factor
+		else if (prod.Left.Name == "Term" && prod.Right.size() == 3 && prod.Right[1].Name == "/")
+		{
+			SemanticAttribute factor = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute op = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute term = SemanticStack.top(); SemanticStack.pop();
+			string temp = NewTemp();
+			EmitCode(temp + " = " + term.Value + " / " + factor.Value);
+			SemanticStack.push(SemanticAttribute(temp, "temp"));
+		}
+		// é¡¹ï¼šTerm -> Factor
+		else if (prod.Left.Name == "Term" && prod.Right.size() == 1 && prod.Right[0].Name == "Factor")
+		{
+			// ç›´æ¥ä¼ é€’å±æ€§ï¼Œè¯­ä¹‰æ ˆä¸å˜
+		}
+		// å› å­ï¼šFactor -> ( Expr )
+		else if (prod.Left.Name == "Factor" && prod.Right.size() == 3 && prod.Right[0].Name == "(")
+		{
+			SemanticAttribute rparen = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute lparen = SemanticStack.top(); SemanticStack.pop();
+			// ç›´æ¥ä¼ é€’Exprçš„å±æ€§
+			SemanticStack.push(expr);
+		}
+		// èµ‹å€¼è¯­å¥ï¼šAssignmentStatement -> id = Expr ;
+		else if (prod.Left.Name == "AssignmentStatement" && prod.Right.size() == 4 && prod.Right[1].Name == "=")
+		{
+			SemanticAttribute semicolon = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute equals = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute id = SemanticStack.top(); SemanticStack.pop();
+			size_t codeStart = ThreeAddressCode.size();
+			EmitCode(id.Value + " = " + expr.Value);
+
+			// è®°å½•ä»£ç ä½ç½®ï¼Œç”¨äºStmt
+			SemanticStack.push(SemanticAttribute("", "stmt_start", codeStart));
+		}
+		// å£°æ˜è¯­å¥ï¼šDeclarationStatement -> Type id = Expr ;
+		else if (prod.Left.Name == "DeclarationStatement" && prod.Right.size() == 5 &&
+			prod.Right[0].Name == "Type" && prod.Right[2].Name == "=")
+		{
+			SemanticAttribute semicolon = SemanticStack.top(); SemanticStack.pop(); // ;
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute equals = SemanticStack.top(); SemanticStack.pop(); // =
+			SemanticAttribute id = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute type = SemanticStack.top(); SemanticStack.pop(); // Type
+
+			size_t codeStart = ThreeAddressCode.size();
+			EmitCode(id.Value + " = " + expr.Value);
+			SemanticStack.push(SemanticAttribute("", "stmt_start", codeStart));
+		}
+		// å£°æ˜è¯­å¥ï¼ˆæ— åˆå§‹åŒ–ï¼‰ï¼šDeclarationStatement -> Type id ;
+		else if (prod.Left.Name == "DeclarationStatement" && prod.Right.size() == 3 &&
+			prod.Right[0].Name == "Type" && prod.Right[2].Name == ";")
+		{
+			SemanticAttribute semicolon = SemanticStack.top(); SemanticStack.pop(); // ;
+			SemanticAttribute id = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute type = SemanticStack.top(); SemanticStack.pop(); // Type
+
+			// ä¸ç”Ÿæˆèµ‹å€¼ä»£ç ï¼Œè®°å½•ä½ç½®
+			SemanticStack.push(SemanticAttribute("", "stmt_start", ThreeAddressCode.size()));
+		}
+		// RelOp -> { <, >, <=, >=, ==, != }
+		else if (prod.Left.Name == "RelOp")
+		{
+			// è¯­ä¹‰æ ˆä¸å˜ï¼Œè¿ç®—ç¬¦å±æ€§ä¼ é€’
+		}
+		// Relè¡¨è¾¾å¼ï¼šRelExpr -> Expr RelOp Expr
+		else if (prod.Left.Name == "RelExpr" && prod.Right.size() == 3 && prod.Right[1].Name == "RelOp")
+		{
+			SemanticAttribute expr2 = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute relOp = SemanticStack.top(); SemanticStack.pop();
+			SemanticAttribute expr1 = SemanticStack.top(); SemanticStack.pop();
+			string temp = NewTemp();
+
+			size_t codeStart = ThreeAddressCode.size();
+			EmitCode(temp + " = " + expr1.Value + " " + relOp.Value + " " + expr2.Value);
+
+			SemanticStack.push(SemanticAttribute(temp, "temp", codeStart, expr1.Value, expr2.Value, relOp.Value));
+		}
+		// Relè¡¨è¾¾å¼ï¼šRelExpr -> Expr
+		else if (prod.Left.Name == "RelExpr" && prod.Right.size() == 1 && prod.Right[0].Name == "Expr")
+		{
+			SemanticAttribute expr = SemanticStack.top(); SemanticStack.pop();
+			SemanticStack.push(expr);
+		}
+		// ifè¯­å¥ï¼šSelectionStatement -> if ( RelExpr ) Stmt
+		else if (prod.Left.Name == "SelectionStatement" && prod.Right.size() == 5 && prod.Right[0].Name == "if")
+		{
+			// äº§ç”Ÿå¼å³éƒ¨ï¼šif ( RelExpr ) Stmt
+			// ä»å³åˆ°å·¦å¼¹å‡ºï¼šStmt, ), RelExpr, (, if
+			// RelExpræ˜¯ç¬¬3ä¸ªï¼ˆç´¢å¼•2ï¼Œä»å³æ•°ç¬¬3ä¸ªï¼‰
+			SemanticAttribute relExpr("", "");
+			SemanticAttribute stmt("", "");
+			vector<SemanticAttribute> attrs;
+			// å¼¹å‡ºæ‰€æœ‰5ä¸ªå±æ€§
+			for (int i = 0; i < 5; i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// ä»å³åˆ°å·¦ï¼šattrs[0]=Stmt, attrs[1]=), attrs[2]=RelExpr, attrs[3]=(, attrs[4]=if
+			if (attrs.size() > 2 && !attrs[2].Value.empty())
+			{
+				relExpr = attrs[2];
+			}
+			else
+			{
+				// å¦‚æœæ‰¾ä¸åˆ°ï¼Œå°è¯•æ‰¾ç¬¬ä¸€ä¸ªéç©ºå±æ€§
+				for (const auto& attr : attrs)
+				{
+					if ((attr.Type == "temp" || attr.Type == "var" || attr.Type == "num") && !attr.Value.empty())
+					{
+						relExpr = attr;
+						break;
+					}
+				}
+			}
+			// è·å–Stmtçš„ä»£ç ä½ç½®
+			if (attrs.size() > 0)
+			{
+				stmt = attrs[0];
+			}
+			if (relExpr.Value.empty())
+			{
+				relExpr.Value = "0"; // é»˜è®¤å€¼
+			}
+			string falseLabel = NewLabel();
+			// ifè¯­å¥çš„æ­£ç¡®é¡ºåºï¼š
+			// 1. RelExprä»£ç ï¼ˆæ¡ä»¶è®¡ç®—ï¼Œå·²ç»åœ¨ä¹‹å‰ç”Ÿæˆï¼‰
+			// 2. if temp == 0 goto L1ï¼ˆæ¡ä»¶æ£€æŸ¥ï¼Œå¦‚æœä¸ºå‡è·³åˆ°ç»“æŸï¼‰
+			// 3. Stmtä»£ç ï¼ˆifè¯­å¥ä½“ï¼‰
+			// 4. L1:ï¼ˆç»“æŸæ ‡ç­¾ï¼‰
+
+			// æ‰¾åˆ°RelExprä»£ç çš„ç»“æŸä½ç½®å’ŒStmtä»£ç çš„èµ·å§‹ä½ç½®
+			size_t relExprEnd = 0;
+			if (relExpr.CodeStartPos >= 0)
+			{
+				relExprEnd = relExpr.CodeStartPos + 1; // RelExprä»£ç åªæœ‰ä¸€è¡Œ
+			}
+			else
+			{
+				// å¦‚æœæ‰¾ä¸åˆ°CodeStartPosï¼ŒæŸ¥æ‰¾åŒ…å«relExpr.Valueçš„ä»£ç è¡Œ
+				for (size_t i = 0; i < ThreeAddressCode.size(); i++)
+				{
+					if (ThreeAddressCode[i].find(relExpr.Value) != string::npos &&
+						ThreeAddressCode[i].find("=") != string::npos)
+					{
+						relExprEnd = i + 1;
+						break;
+					}
+				}
+			}
+			size_t stmtStart = (stmt.CodeStartPos >= 0 && stmt.Type == "stmt_start") ? stmt.CodeStartPos : ThreeAddressCode.size();
+
+			// åœ¨RelExprä»£ç ä¹‹åã€Stmtä»£ç ä¹‹å‰æ’å…¥æ¡ä»¶æ£€æŸ¥
+			// ç¡®ä¿insertPosåœ¨æ­£ç¡®çš„ä½ç½®
+			size_t insertPos = stmtStart;
+			if (relExprEnd > 0 && relExprEnd < stmtStart)
+			{
+				insertPos = relExprEnd; // åœ¨RelExprä»£ç ä¹‹å
+			}
+			else if (stmtStart < ThreeAddressCode.size())
+			{
+				insertPos = stmtStart; // åœ¨Stmtä»£ç ä¹‹å‰
+			}
+			InsertCodeAt(insertPos, "if " + relExpr.Value + " == 0 goto " + falseLabel);
+
+			// åœ¨Stmtä»£ç ä¹‹åæ’å…¥ç»“æŸæ ‡ç­¾
+			EmitCode(falseLabel + ":");
+		}
+		// if-elseè¯­å¥ï¼šSelectionStatement -> if ( RelExpr ) Stmt else Stmt
+		else if (prod.Left.Name == "SelectionStatement" && prod.Right.size() == 7 && prod.Right[0].Name == "if")
+		{
+			// äº§ç”Ÿå¼å³éƒ¨ï¼šif ( RelExpr ) Stmt else Stmt
+			// ä»å³åˆ°å·¦å¼¹å‡ºï¼šStmt2, else, Stmt1, ), RelExpr, (, if
+			// RelExpræ˜¯ç¬¬5ä¸ªï¼ˆç´¢å¼•4ï¼Œä»å³æ•°ç¬¬5ä¸ªï¼‰
+			SemanticAttribute relExpr("", "");
+			vector<SemanticAttribute> attrs;
+			// å¼¹å‡ºæ‰€æœ‰7ä¸ªå±æ€§
+			for (int i = 0; i < 7; i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// ä»å³åˆ°å·¦ï¼šattrs[0]=Stmt2, attrs[1]=else, attrs[2]=Stmt1, attrs[3]=), attrs[4]=RelExpr, attrs[5]=(, attrs[6]=if
+			if (attrs.size() > 4 && !attrs[4].Value.empty())
+			{
+				relExpr = attrs[4];
+			}
+			else
+			{
+				// å¦‚æœæ‰¾ä¸åˆ°ï¼Œå°è¯•æ‰¾ç¬¬ä¸€ä¸ªéç©ºå±æ€§
+				for (const auto& attr : attrs)
+				{
+					if ((attr.Type == "temp" || attr.Type == "var" || attr.Type == "num") && !attr.Value.empty())
+					{
+						relExpr = attr;
+						break;
+					}
+				}
+			}
+			if (relExpr.Value.empty())
+			{
+				relExpr.Value = "0"; // é»˜è®¤å€¼
+			}
+			string falseLabel = NewLabel();
+			string endLabel = NewLabel();
+			EmitCode("if " + relExpr.Value + " == 0 goto " + falseLabel);
+			EmitCode("goto " + endLabel);
+			EmitCode(falseLabel + ":");
+			EmitCode(endLabel + ":");
+		}
+		// whileå¾ªç¯ï¼šIterationStatement -> while ( RelExpr ) Stmt
+		else if (prod.Left.Name == "IterationStatement" && prod.Right.size() == 5 && prod.Right[0].Name == "while")
+		{
+			// äº§ç”Ÿå¼å³éƒ¨ï¼šwhile ( RelExpr ) Stmt
+			// ä»å³åˆ°å·¦å¼¹å‡ºï¼šStmt, ), RelExpr, (, while
+			// RelExpræ˜¯ç¬¬3ä¸ªï¼ˆç´¢å¼•2ï¼Œä»å³æ•°ç¬¬3ä¸ªï¼‰
+			SemanticAttribute relExpr("", "");
+			SemanticAttribute stmt("", "");
+			vector<SemanticAttribute> attrs;
+			// å¼¹å‡ºæ‰€æœ‰5ä¸ªå±æ€§
+			for (int i = 0; i < 5; i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// ä»å³åˆ°å·¦ï¼šattrs[0]=Stmt, attrs[1]=), attrs[2]=RelExpr, attrs[3]=(, attrs[4]=while
+			if (attrs.size() > 2 && !attrs[2].Value.empty())
+			{
+				relExpr = attrs[2];
+			}
+			else
+			{
+				// å¦‚æœæ‰¾ä¸åˆ°ï¼Œå°è¯•æ‰¾ç¬¬ä¸€ä¸ªéç©ºå±æ€§
+				for (const auto& attr : attrs)
+				{
+					if ((attr.Type == "temp" || attr.Type == "var" || attr.Type == "num") && !attr.Value.empty())
+					{
+						relExpr = attr;
+						break;
+					}
+				}
+			}
+			// è·å–Stmtçš„ä»£ç ä½ç½®
+			if (attrs.size() > 0)
+			{
+				stmt = attrs[0];
+			}
+			if (relExpr.Value.empty())
+			{
+				relExpr.Value = "0"; // é»˜è®¤å€¼
+			}
+
+			// ç”Ÿæˆæ ‡ç­¾
+			string loopLabel = NewLabel();  //å¾ªç¯å¼€å§‹
+			string endLabel = NewLabel();   //å¾ªç¯ç»“æŸ
+
+			size_t stmtStart = 0;
+			if (stmt.CodeStartPos >= 0 && stmt.Type == "stmt_start")
+			{
+				stmtStart = stmt.CodeStartPos;
+				// å‘å‰æŸ¥æ‰¾ï¼Œæ‰¾åˆ°å¾ªç¯ä½“ä»£ç çš„çœŸæ­£èµ·å§‹ä½ç½®
+				// å¾ªç¯ä½“ä»£ç å¯èƒ½åŒ…æ‹¬è¡¨è¾¾å¼è®¡ç®—çš„ä¸´æ—¶å˜é‡èµ‹å€¼ï¼Œè¿™äº›åœ¨stmt.CodeStartPosä¹‹å‰
+				// ä¸ºäº†ç®€åŒ–ï¼Œé»˜è®¤å¾ªç¯ä½“ä»£ç ä»stmt.CodeStartPoså¼€å§‹
+			}
+			else
+			{
+				// å¦‚æœæ‰¾ä¸åˆ°CodeStartPosï¼Œå°è¯•ä»å½“å‰ä»£ç ä¸­æŸ¥æ‰¾Stmtä»£ç çš„èµ·å§‹ä½ç½®
+				stmtStart = ThreeAddressCode.size();
+			}
+
+			// ç”±äºRelExprä»£ç åœ¨å¾ªç¯å¤–ç”Ÿæˆï¼Œæˆ‘ä»¬éœ€è¦æ‰¾åˆ°RelExprä»£ç ä¹‹åã€Stmtä»£ç ä¹‹å‰çš„æ‰€æœ‰ä»£ç 
+			// è¿™äº›ä»£ç å°±æ˜¯å¾ªç¯ä½“ä»£ç ï¼ˆåŒ…æ‹¬è¡¨è¾¾å¼è®¡ç®—çš„ä¸´æ—¶å˜é‡ï¼‰
+			size_t relExprEnd = 0;
+			if (relExpr.CodeStartPos >= 0)
+			{
+				relExprEnd = relExpr.CodeStartPos + 1; // RelExprä»£ç åªæœ‰ä¸€è¡Œ
+			}
+			else
+			{
+				// æŸ¥æ‰¾RelExprä»£ç çš„ä½ç½®
+				for (size_t i = 0; i < ThreeAddressCode.size(); i++)
+				{
+					if (ThreeAddressCode[i].find(relExpr.Value) != string::npos &&
+						ThreeAddressCode[i].find("=") != string::npos)
+					{
+						relExprEnd = i + 1;
+						break;
+					}
+				}
+			}
+
+			// å¾ªç¯ä½“ä»£ç çš„èµ·å§‹ä½ç½®åº”è¯¥æ˜¯RelExprä»£ç ä¹‹åã€Stmtä»£ç ä¹‹å‰çš„æ‰€æœ‰ä»£ç çš„èµ·å§‹ä½ç½®
+			// å¦‚æœstmtStart > relExprEndï¼Œè¯´æ˜å¾ªç¯ä½“ä»£ç åœ¨RelExprä¹‹å
+			// å¾ªç¯ä½“ä»£ç çš„çœŸæ­£èµ·å§‹ä½ç½®åº”è¯¥æ˜¯relExprEndï¼ˆRelExprä»£ç ä¹‹åçš„ç¬¬ä¸€è¡Œï¼‰
+			if (stmtStart > relExprEnd)
+			{
+				stmtStart = relExprEnd; // å¾ªç¯ä½“ä»£ç ä»RelExprä»£ç ä¹‹åå¼€å§‹
+			}
+
+			// æ‰¾åˆ°å¹¶åˆ é™¤åŸæ¥çš„RelExprä»£ç ï¼ˆåœ¨å¾ªç¯å¤–ç”Ÿæˆçš„ï¼Œéœ€è¦ç§»åˆ°å¾ªç¯å†…ï¼‰
+			size_t relExprStart = relExprStart = relExpr.CodeStartPos;;
+
+			// å¦‚æœRelExprä»£ç åœ¨Stmtä»£ç ä¹‹å‰ï¼Œåˆ é™¤å®ƒå¹¶è°ƒæ•´stmtStart
+			if (relExprStart < stmtStart && relExprStart < ThreeAddressCode.size())
+			{
+				ThreeAddressCode.erase(ThreeAddressCode.begin() + relExprStart);
+				if (stmtStart > relExprStart)
+				{
+					stmtStart--; // è°ƒæ•´stmtStartä½ç½®
+				}
+			}
+
+			// åœ¨Stmtä»£ç ä¹‹å‰æ’å…¥ï¼š
+			// 1. å¾ªç¯å¼€å§‹æ ‡ç­¾ L0:ï¼ˆç«‹å³å®šä½åˆ°å¾ªç¯å¼€å§‹ä½ç½®ï¼‰
+			// 2. é‡æ–°ç”ŸæˆRelExprä»£ç ï¼ˆåœ¨å¾ªç¯å†…éƒ¨ï¼Œæ¯æ¬¡å¾ªç¯éƒ½é‡æ–°è®¡ç®—ï¼‰
+			// 3. æ¡ä»¶æ£€æŸ¥ï¼šif temp == 0 goto L1ï¼ˆå¦‚æœæ¡ä»¶ä¸ºå‡ï¼Œè·³åˆ°å¾ªç¯ç»“æŸï¼‰
+			string codeAtStmtStart = (stmtStart < ThreeAddressCode.size()) ? ThreeAddressCode[stmtStart] : "N/A";
+			InsertCodeAt(stmtStart, loopLabel + ":");
+
+			// é‡æ–°ç”ŸæˆRelExprä»£ç ï¼ˆä½¿ç”¨ä¿å­˜çš„è¡¨è¾¾å¼ä¿¡æ¯ï¼‰
+			if (!relExpr.Expr1.empty() && !relExpr.Expr2.empty() && !relExpr.Op.empty())
+			{
+				string newTemp = NewTemp();
+				InsertCodeAt(stmtStart + 1, newTemp + " = " + relExpr.Expr1 + " " + relExpr.Op + " " + relExpr.Expr2);
+				InsertCodeAt(stmtStart + 2, "if " + newTemp + " == 0 goto " + endLabel);
+			}
+			else
+			{
+				// å¦‚æœæ²¡æœ‰ä¿å­˜è¡¨è¾¾å¼ä¿¡æ¯ï¼Œä½¿ç”¨åŸæ¥çš„ä¸´æ—¶å˜é‡
+				InsertCodeAt(stmtStart + 1, "if " + relExpr.Value + " == 0 goto " + endLabel);
+			}
+
+			// åœ¨Stmtä»£ç ä¹‹åæ’å…¥ï¼š
+			// 4. goto L0ï¼ˆè·³å›å¾ªç¯å¼€å§‹ï¼‰
+			// 5. L1:ï¼ˆå¾ªç¯ç»“æŸæ ‡ç­¾ï¼‰
+			size_t stmtEnd = ThreeAddressCode.size();
+			InsertCodeAt(stmtEnd, "goto " + loopLabel);
+			EmitCode(endLabel + ":");
+		}
+		// CompoundStatement -> { } æˆ– { StmtList }
+		else if (prod.Left.Name == "CompoundStatement")
+		{
+			// å¯¹äºCompoundStatementå½’çº¦ï¼Œä¼ é€’StmtListçš„ä»£ç ä½ç½®
+			vector<SemanticAttribute> attrs;
+			for (size_t i = 0; i < prod.Right.size(); i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// æ‰¾åˆ°stmt_startç±»å‹çš„å±æ€§ï¼Œè®°å½•ä»£ç ä½ç½®
+			int codeStart = -1;
+			for (const auto& attr : attrs)
+			{
+				if (attr.Type == "stmt_start" && attr.CodeStartPos >= 0)
+				{
+					codeStart = attr.CodeStartPos;
+					break;
+				}
+			}
+			// å¦‚æœæ²¡æœ‰æ‰¾åˆ°ï¼Œä½¿ç”¨å½“å‰ä»£ç ä½ç½®
+			if (codeStart < 0)
+			{
+				codeStart = ThreeAddressCode.size();
+			}
+			// ä¼ é€’ä»£ç ä½ç½®ä¿¡æ¯
+			SemanticStack.push(SemanticAttribute("", "stmt_start", codeStart));
+		}
+		// StmtList -> Stmt æˆ– Stmt StmtList
+		else if (prod.Left.Name == "StmtList")
+		{
+			// å¯¹äºStmtListå½’çº¦ï¼Œä¼ é€’ç¬¬ä¸€ä¸ªStmtçš„ä»£ç ä½ç½®
+			vector<SemanticAttribute> attrs;
+			for (size_t i = 0; i < prod.Right.size(); i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// æ‰¾åˆ°stmt_startç±»å‹çš„å±æ€§ï¼Œè®°å½•ä»£ç ä½ç½®ï¼ˆç¬¬ä¸€ä¸ªStmtçš„ä½ç½®ï¼‰
+			// æ³¨æ„ï¼šå¯¹äº StmtList -> Stmt StmtListï¼Œattrs[0]=StmtList, attrs[1]=Stmt
+			// æˆ‘ä»¬éœ€è¦å–å·¦è¾¹çš„Stmtï¼ˆattrs[1]ï¼‰ï¼Œè€Œä¸æ˜¯attrs[0]ï¼ˆå³è¾¹çš„StmtListï¼‰
+			int codeStart = -1;
+			if (prod.Right.size() == 2)
+			{
+				// StmtList -> Stmt StmtListï¼šå–å·¦è¾¹çš„Stmtï¼ˆattrs[1]ï¼‰
+				if (attrs.size() > 1 && attrs[1].Type == "stmt_start" && attrs[1].CodeStartPos >= 0)
+				{
+					codeStart = attrs[1].CodeStartPos;
+				}
+			}
+			else
+			{
+				// StmtList -> Stmtï¼šå–Stmtï¼ˆattrs[0]ï¼‰
+				if (attrs.size() > 0 && attrs[0].Type == "stmt_start" && attrs[0].CodeStartPos >= 0)
+				{
+					codeStart = attrs[0].CodeStartPos;
+				}
+			}
+			// å¦‚æœæ²¡æœ‰æ‰¾åˆ°ï¼Œå°è¯•ä»æ‰€æœ‰å±æ€§ä¸­æŸ¥æ‰¾
+			if (codeStart < 0)
+			{
+				for (const auto& attr : attrs)
+				{
+					if (attr.Type == "stmt_start" && attr.CodeStartPos >= 0)
+					{
+						codeStart = attr.CodeStartPos;
+						break;
+					}
+				}
+			}
+			// å¦‚æœè¿˜æ˜¯æ²¡æœ‰æ‰¾åˆ°ï¼Œä½¿ç”¨å½“å‰ä»£ç ä½ç½®
+			if (codeStart < 0)
+			{
+				codeStart = ThreeAddressCode.size();
+			}
+			// ä¼ é€’ä»£ç ä½ç½®ä¿¡æ¯
+			SemanticStack.push(SemanticAttribute("", "stmt_start", codeStart));
+		}
+		// Stmt -> AssignmentStatement, CompoundStatementç­‰
+		else if (prod.Left.Name == "Stmt")
+		{
+			// å¯¹äºStmtå½’çº¦ï¼Œè®°å½•ä»£ç ä½ç½®
+			vector<SemanticAttribute> attrs;
+			for (size_t i = 0; i < prod.Right.size(); i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// æ‰¾åˆ°stmt_startç±»å‹çš„å±æ€§ï¼Œè®°å½•ä»£ç ä½ç½®
+			int codeStart = -1;
+			for (const auto& attr : attrs)
+			{
+				if (attr.Type == "stmt_start" && attr.CodeStartPos >= 0)
+				{
+					codeStart = attr.CodeStartPos;
+					break;
+				}
+			}
+			// å¦‚æœæ²¡æœ‰æ‰¾åˆ°ï¼Œä½¿ç”¨å½“å‰ä»£ç ä½ç½®
+			if (codeStart < 0)
+			{
+				codeStart = ThreeAddressCode.size();
+			}
+			// ä¼ é€’ä»£ç ä½ç½®ä¿¡æ¯
+			SemanticStack.push(SemanticAttribute("", "stmt_start", codeStart));
+		}
+		// å…¶ä»–äº§ç”Ÿå¼ï¼šéœ€è¦å¼¹å‡ºå¯¹åº”æ•°é‡çš„è¯­ä¹‰å±æ€§ï¼Œä½†ä¸ç”Ÿæˆä»£ç 
+		else
+		{
+			// å¯¹äºä¸ç”Ÿæˆä»£ç çš„äº§ç”Ÿå¼ï¼Œéœ€è¦å¼¹å‡ºå³éƒ¨ç¬¦å·å¯¹åº”çš„è¯­ä¹‰å±æ€§
+			// ä½†ä¿ç•™æœ€åä¸€ä¸ªï¼ˆå¦‚æœæœ‰ï¼‰ä½œä¸ºå·¦éƒ¨çš„å±æ€§
+			vector<SemanticAttribute> attrs;
+			for (size_t i = 0; i < prod.Right.size(); i++)
+			{
+				if (!SemanticStack.empty() && SemanticStack.top().Type != "marker")
+				{
+					attrs.push_back(SemanticStack.top());
+					SemanticStack.pop();
+				}
+			}
+			// å¦‚æœæœ‰å±æ€§ï¼Œä¼ é€’ç¬¬ä¸€ä¸ªï¼ˆé€šå¸¸æ˜¯æœ€åä¸€ä¸ªè¢«å‹å…¥çš„ï¼Œå³æœ€å·¦è¾¹çš„ï¼‰
+			if (!attrs.empty())
+			{
+				SemanticStack.push(attrs.back());
+			}
+		}
+	}
+
+	// è§£æå‡½æ•°ï¼šæ¥æ”¶ç¬¦å·åºåˆ—ï¼Œè¿”å›æ˜¯å¦è§£ææˆåŠŸ
 	bool Parse(const vector<GrammarSymbol>& inputSymbols)
 	{
-		cout << "¿ªÊ¼ÒÆ½ø-¹éÔ¼·ÖÎö¡£\n";
+		cout << "å¼€å§‹ç§»è¿›-å½’çº¦åˆ†æã€‚\n";
 
 		size_t InputIndex = 0;
 		const GrammarSymbol& EndSymbol = TableBuilder.FFCalculator.EndSymbol;
 
 		while (true)
 		{
-			// »ñÈ¡µ±Ç°×´Ì¬ºÍµ±Ç°ÊäÈë·ûºÅ
+			// è·å–å½“å‰çŠ¶æ€å’Œå½“å‰è¾“å…¥ç¬¦å·
 			int CurrentState = StateStack.top();
 			const GrammarSymbol& CurrentInput = (InputIndex < inputSymbols.size()) ? inputSymbols[InputIndex] : EndSymbol;
 
-			// ´¦ÀíIDºÍNUM
+			// å¤„ç†IDå’ŒNUM
 			GrammarSymbol LookupSymbol = CurrentInput;
 			if (CurrentInput.TokenType == "ID") {
 				LookupSymbol.Name = "id";
@@ -382,173 +687,43 @@ struct ShiftReduceParser
 				LookupSymbol.Name = "num";
 			}
 
-			cout << "\nµ±Ç°×´Ì¬: " << CurrentState << ", µ±Ç°ÊäÈë·ûºÅ: " << CurrentInput.Name << "\n";
+			cout << "\nå½“å‰çŠ¶æ€: " << CurrentState << ", å½“å‰è¾“å…¥ç¬¦å·: " << CurrentInput.Name << "\n";
 			PrintStacks();
 
-			// ²éÕÒACTION±í
+			// æŸ¥æ‰¾ACTIONè¡¨
 			const SLRAction& Action = TableBuilder.GetAction(CurrentState, LookupSymbol);
 
 			if (Action.Type == SLRActionType::SHIFT)
 			{
-				cout << "Ö´ĞĞÒÆ½ø²Ù×÷: S" << Action.StateOrProduction << "\n";
-				
-#ifdef SEM_IR
-				/*
-				(0) shift Ç°ÖÃ¶¯×÷£º×¨ÃÅ´¦Àí "else"
-				Ô­Òò£º
-				- if-else µÄ¿ØÖÆÁ÷»ØÌîĞèÒªÒ»¸ö ¡°then ½áÊøºóÌø¹ı else¡± µÄ goto Õ¼Î»£»
-				- Í¬Ê±»¹Òª°ÑÌõ¼şµÄ falselist »ØÌîµ½ else µÄÈë¿Ú£»
-				- µ«ÔÚ´¿ LR reduce ´¥·¢µã£¬ÓĞÊ±ºÜÄÑ×¼È·ÄÃµ½¡°else µÄÈë¿ÚµØÖ·¡±£¬Òò´ËÕâÀï²ÉÓÃ×îĞ¡»¯×ö·¨£º
-				  ÔÚÕæÕı SHIFT else Ö®Ç°£¨else ÉĞÎ´ÈëÕ»¡¢else µÄ IR ÉĞÎ´²úÉú£©£¬ÏÈ£º
-				  1) emit goto _£º±£´æµ½ PendingIfElseEndJumps£¨then ·ÖÖ§½áÊøÌøµ½ end£©
-				  2) backpatch Ìõ¼şÕæµ½ then.begin
-				  3) backpatch Ìõ¼ş¼Ùµ½ else.begin£¨´Ë¿Ì NextQuad() ¼´ else µÚÒ»¾äµÄµØÖ·£©
-				*/
-				if (CurrentInput.Name == "else") {
-					// ¸´ÖÆ·ûºÅÕ»/ÓïÒåÕ»µ½Êı×é£¬ÓÃÄ£Ê½Æ¥Åä¶¨Î»×î½üµÄ if (RelExpr) Stmt
-					// ÕâÊÇ¡°×îĞ¡»¯ hack¡±£¬²»ÒÀÀµ²úÉúÊ½ id£¬µ«¶ÔÕ»ĞÎÌ¬ÓĞ¼ÙÉè
-					auto CopySyms = SymbolStack; vector<GrammarSymbol> syms;
-					auto CopyVals = ValueStack; vector<SemVal> vals;
-					while (!CopySyms.empty()) { syms.push_back(CopySyms.top()); CopySyms.pop(); }
-					while (!CopyVals.empty()) { vals.push_back(CopyVals.top()); CopyVals.pop(); }
-					reverse(syms.begin(), syms.end());
-					reverse(vals.begin(), vals.end());
-
-					// ÕÒ×îºóÒ»¸ö "if ( RelExpr ) Stmt" Ä£Ê½
-					int idx = -1;
-					for (int i = (int)syms.size() - 5; i >= 0; --i) {
-						if (syms[i].Name == "if" && syms[i + 1].Name == "(" && syms[i + 2].Name == "RelExpr" && syms[i + 3].Name == ")" && syms[i + 4].Name == "Stmt") {
-							idx = i; break;
-						}
-					}
-					if (idx != -1 && Is<BoolVal>(vals[idx + 2]) && Is<StmtVal>(vals[idx + 4])) {
-						const auto& B = As<BoolVal>(vals[idx + 2]); // if Ìõ¼ş²úÉúµÄ truelist/falselist
-						const auto& S1 = As<StmtVal>(vals[idx + 4]); // then Óï¾äÈë¿Ú begin
-
-						// then Ö´ĞĞÍêºóÒªÌø¹ı else£ºgoto end£¨Õ¼Î»£©
-						int j = Emit("goto", "", "", "", -1);
-						PendingIfElseEndJumps.push(j);
-
-						// Ìõ¼şÕæÌøµ½ then µÄÈë¿Ú
-						Backpatch(B.truelist, S1.begin == -1 ? NextQuad() : S1.begin);
-
-						// Ìõ¼ş¼ÙÌøµ½ else µÄÈë¿Ú£º
-						// ¹Ø¼üµã£ºÎÒÃÇ°Ñ else µÄÈë¿Ú¶¨ÒåÎª¡°goto end Ö®ºóµÄÏÂÒ»Ìõ¡±£¬¼´ NextQuad()
-						Backpatch(B.falselist, NextQuad());
-					}
-				}
-
-				/*
-				(1) º¯ÊıÍ·¼ì²â£ºÔÚ SHIFT '(' Ê±³¢ÊÔÊ¶±ğ ¡°Type id ( ... ) { ... }¡± µÄº¯Êı¶¨Òå¿ªÊ¼¡£
-				ÎªÊ²Ã´ÔÚ SHIFT '(' ×ö£¿
-				- µ±¶Áµ½ '('£¬ËµÃ÷¸Õ¸Õ¶Á¹ıµÄ token ĞòÁĞĞÎÈç£ºType id '('
-				- ¶ÔÄãµÄÓï·¨À´Ëµ£ºÈ«¾Ö²ãÃæµÄ Type id '(' ×îµäĞÍ¾ÍÊÇº¯Êı¶¨Òå
-				¶¯×÷£º
-				- ½«º¯ÊıÃû²åÈëÈ«¾Ö·ûºÅ±í£¨kind=FUNC£¬type=·µ»ØÀàĞÍ£©
-				- ÉèÖÃ PendingFunc/InFunction µÈÉÏÏÂÎÄ£¬²ÎÊıÁĞ±íÔÚºóĞø¹éÔ¼ Parameter Ê±ÊÕ¼¯
-				×¢Òâ£º
-				- ÕâÀïÓÃ Scopes.size()==1 ÏŞÖÆÎª¡°È«¾Ö²ã¡±Ê¶±ğº¯Êı£¬ÒÔÃâÎóÅĞ¾Ö²¿±äÁ¿ºóµÄ '('£¨ÈôÓï·¨À©Õ¹º¯ÊıÖ¸Õë/µ÷ÓÃµÈ»á¸ü¸´ÔÓ£©
-				*/
-				if (CurrentInput.Name == "(") {
-					auto tmpSym = SymbolStack; auto tmpVal = ValueStack;
-					GrammarSymbol s1 = tmpSym.top(); tmpSym.pop(); // Õ»¶¥·ûºÅ£¨¸ÕÒÆ½øµÄÇ°Ò»¸ö·ûºÅ£©
-					GrammarSymbol s2 = tmpSym.top(); // s1 ÏÂ·½·ûºÅ
-
-					SemVal v1 = tmpVal.top(); tmpVal.pop();
-					SemVal v2 = tmpVal.top();
-
-					if (s1.Name == "id" && s2.Name == "Type" && Is<IdVal>(v1) && Is<TypeVal>(v2) && Scopes.size() == 1) {
-						auto idv = As<IdVal>(v1);
-						auto tv = As<TypeVal>(v2);
-
-						string err;
-						Symbol fs; fs.kind = SymKind::FUNC; fs.type = tv.t; fs.irName = idv.name; fs.scopeLevel = 0;
-
-						// Í¬Ò»×÷ÓÃÓòÖØ¶¨Òå¼ì²é£ºÍ¬Ãûº¯ÊıÖØ¸´¶¨ÒåÖ±½Ó±¨´í
-						if (!InsertHere(idv.name, fs, err)) {
-							cout << "ÓïÒå´íÎó: " << err << " @ " << idv.pos << "\n";
-							return false;
-						}
-						// ½øÈë¡°º¯Êı¶¨ÒåÉÏÏÂÎÄ¡±£¬²ÎÊıºóÃæ¹éÔ¼ Parameter Ê±ÀÛ¼Æµ½ PendingParams
-						PendingFunc = true; InFunction = true;
-						CurFuncName = idv.name; CurFuncRet = tv.t;
-						PendingParams.clear();
-					}
-				}
-#endif
-				
-				// ÒÆ½ø´¦ÀíºóµÄ·ûºÅºÍ×´Ì¬
+				cout << "æ‰§è¡Œç§»è¿›æ“ä½œ: S" << Action.StateOrProduction << "\n";
+				// ç§»è¿›å¤„ç†åçš„ç¬¦å·å’ŒçŠ¶æ€
 				SymbolStack.push(LookupSymbol);
 				StateStack.push(Action.StateOrProduction);
 
-#ifdef SEM_IR
-				/*
-				(3) ÓïÒåÖµÈëÕ»£ºÓë SymbolStack µÄ SHIFT ±ØĞë±£³ÖÍ¬²½¶ÔÆë¡£
-				¹Ø¼üµã£º
-				- Óï·¨·ÖÎöÓÃÓÚ²é ACTION µÄ LookupSymbol£ºID/NUM ±»Í³Ò»³É "id"/"num"
-				- µ«ÓïÒå·ÖÎöĞèÒª±£ÁôÔ­Ê¼ lexeme£¨ÀıÈç±äÁ¿Ãû "x"¡¢³£Á¿ "123"£©
-				Òò´Ë£ºÓïÒåÖµÈëÕ»Ê¹ÓÃ CurrentInput£¨Ô­Ê¼ token£©£¬¶ø²»ÊÇ LookupSymbol¡£
-				*/
-				SemVal pushed = monostate{};
-				if (CurrentInput.TokenType == "ID") {
-					pushed = IdVal{ CurrentInput.Name,CurrentInput.Position };
+				// å¤„ç†è¯­ä¹‰æ ˆï¼šå¯¹äºidå’Œnumï¼Œå‹å…¥å®ƒä»¬çš„å€¼
+				if (CurrentInput.TokenType == "ID" || CurrentInput.TokenType == "NUM")
+				{
+					SemanticStack.push(SemanticAttribute(CurrentInput.Name, CurrentInput.TokenType == "ID" ? "var" : "num"));
 				}
-				else if (CurrentInput.TokenType == "NUM") {
-					int x = 0; try { x = stoi(CurrentInput.Name); }
-					catch (...) { x = 0; }
-					pushed = NumVal{ x };
+				else if (CurrentInput.Name == "id" || CurrentInput.Name == "num")
+				{
+					// å¦‚æœå·²ç»æ˜¯å¤„ç†è¿‡çš„idæˆ–numï¼Œä½¿ç”¨åŸå§‹è¾“å…¥çš„å€¼
+					SemanticStack.push(SemanticAttribute(CurrentInput.Name, CurrentInput.Name == "id" ? "var" : "num"));
 				}
-				else if (CurrentInput.Name == "int") {
-					pushed = TypeVal{ BaseType::INT };
+				else if (CurrentInput.Name == "<" || CurrentInput.Name == ">" ||
+					CurrentInput.Name == "<=" || CurrentInput.Name == ">=" ||
+					CurrentInput.Name == "==" || CurrentInput.Name == "!=")
+				{
+					// å…³ç³»è¿ç®—ç¬¦
+					SemanticStack.push(SemanticAttribute(CurrentInput.Name, "op"));
 				}
-				else if (CurrentInput.Name == "void") {
-					pushed = TypeVal{ BaseType::VOID };
+				else
+				{
+					// å…¶ä»–ç¬¦å·ï¼ˆè¿ç®—ç¬¦ã€æ‹¬å·ç­‰ï¼‰å‹å…¥ç©ºå±æ€§
+					SemanticStack.push(SemanticAttribute("", "empty"));
 				}
-				else if (CurrentInput.Name == "<" || CurrentInput.Name == ">" || CurrentInput.Name == "<=" || CurrentInput.Name == ">=" || CurrentInput.Name == "==" || CurrentInput.Name == "!=") {
-					// ¹ØÏµÔËËã·û×÷Îª OpVal ±£´æ£¬ºóĞøÔÚ¹éÔ¼ RelExpr Ê±ÓÃÀ´Éú³É if< / if== µÈÌø×ª
-					pushed = OpVal{ CurrentInput.Name };
-				}
-				ValueStack.push(pushed);
 
-				/*
-				(4) ×÷ÓÃÓò¹ÜÀí£ºÔÚ SHIFT '{' / SHIFT '}' Ê±Î¬»¤·ûºÅ±í×÷ÓÃÓòÕ»¡£
-				- '{'£ºBeginScope()£¬ĞÂ½¨Ò»¸ö¾Ö²¿×÷ÓÃÓò£¨¿é×÷ÓÃÓò£©
-				- '}'£ºEndScope()£¬ÍË³öµ±Ç°×÷ÓÃÓò
-				²¢ÇÒ£º
-				- Èç¹û PendingFunc=true£¬ËµÃ÷¸ÕÊ¶±ğÍêº¯ÊıÍ·£¬µ«²ÎÊı»¹Ã»ÕæÕı½øÈë·ûºÅ±í
-				  ÕâÀïÑ¡ÔñÔÚ½øÈëº¯ÊıÌå '{' Ê±£¬°Ñ PendingParams ²åÈëµ½ĞÂ½¨µÄ×÷ÓÃÓòÖĞ£¨²ÎÊıÊôÓÚº¯ÊıÌå×îÍâ²ã×÷ÓÃÓò£©
-				- FuncScopeDepth ÓÃÓÚÅĞ¶Ïº¯ÊıÌå½áÊø£ºµ± EndScope ºó Scopes.size() < FuncScopeDepth ¼´ÈÏÎªº¯Êı½áÊø
-				*/
-				if (CurrentInput.Name == "{") {
-					BeginScope();
-					// Èô¸Õ½øÈëº¯ÊıÌå£º°Ñ²ÎÊı²åÈëµ½º¯ÊıÌå×÷ÓÃÓòÖĞ
-					if (PendingFunc) {
-						FuncScopeDepth = (int)Scopes.size();
-						// ²ÎÊıÃûÖØÃû¼ì²é£¨Í¬Ò»¸ö²ÎÊıÁĞ±íÖĞ²»ÔÊĞíÖØ¸´£©
-						set<string> seen;
-						for (auto& [pname, pt] : PendingParams) {
-							if (seen.count(pname)) { cout << "ÓïÒå´íÎó: ²ÎÊıÖØÃû " << pname << "\n"; return false; }
-							seen.insert(pname);
-							// ²ÎÊı×÷Îª PARAM ·ûºÅ²åÈëµ±Ç°×÷ÓÃÓò£¬Éú³ÉÎ¨Ò»ÃûÓÃÓÚ IR
-							Symbol ps; ps.kind = SymKind::PARAM; ps.type = pt; ps.irName = NewVarName(pname); ps.scopeLevel = (int)Scopes.size() - 1;
-							string err;
-							if (!InsertHere(pname, ps, err)) { cout << "ÓïÒå´íÎó: " << err << "\n"; return false; }
-						}
-						// ²ÎÊıÒÑÂä±í£¬º¯ÊıÍ·´¦ÀíÍê±Ï
-						PendingFunc = false;
-					}
-				}
-				else if (CurrentInput.Name == "}") {
-					EndScope();
-					// Èô×÷ÓÃÓòµ¯³öµ½ÁËº¯ÊıÌåÖ®Íâ£¬ËµÃ÷º¯Êı½áÊø£¬Çå¿Õº¯ÊıÉÏÏÂÎÄ
-					if (InFunction && (int)Scopes.size() < FuncScopeDepth) {
-						// º¯ÊıÌå½áÊø
-						InFunction = false; CurFuncName.clear(); CurFuncRet = BaseType::ERR; FuncScopeDepth = 0;
-					}
-				}
-#endif
-
-				// ÒÆ¶¯µ½ÏÂÒ»¸öÊäÈë·ûºÅ
+				// ç§»åŠ¨åˆ°ä¸‹ä¸€ä¸ªè¾“å…¥ç¬¦å·
 				if (CurrentInput != EndSymbol)
 				{
 					InputIndex++;
@@ -556,322 +731,83 @@ struct ShiftReduceParser
 			}
 			else if (Action.Type == SLRActionType::REDUCE)
 			{
-				cout << "Ö´ĞĞ¹éÔ¼²Ù×÷: R" << Action.StateOrProduction << "\n";
-				// ¸ù¾İ²úÉúÊ½ID»ñÈ¡²úÉúÊ½
+				cout << "æ‰§è¡Œå½’çº¦æ“ä½œ: R" << Action.StateOrProduction << "\n";
+				// æ ¹æ®äº§ç”Ÿå¼IDè·å–äº§ç”Ÿå¼
 				const Production& Prod = GetProductionById(Action.StateOrProduction);
-				cout << "Ê¹ÓÃ²úÉúÊ½: " << Prod.ToString() << "\n";
+				cout << "ä½¿ç”¨äº§ç”Ÿå¼: " << Prod.ToString() << "\n";
 
-				// Èç¹ûÊÇÔö¹ãÎÄ·¨µÄ¿ªÊ¼²úÉúÊ½£¨Program' -> Program£©
+				// å¦‚æœæ˜¯å¢å¹¿æ–‡æ³•çš„å¼€å§‹äº§ç”Ÿå¼ï¼ˆProgram' -> Programï¼‰
 				if (Prod.Left.Name == Grammar.StartSymbol.Name)
 				{
-					cout << "\n·ÖÎö³É¹¦£ºÍ¨¹ıÔö¹ã²úÉúÊ½½ÓÊÜ\n";
-#ifdef SEM_IR
-					DumpSymbols();
-					DumpIR();
-#endif
+					cout << "\nåˆ†ææˆåŠŸï¼šé€šè¿‡å¢å¹¿äº§ç”Ÿå¼æ¥å—\n";
 					return true;
 				}
 
-#ifdef SEM_IR
-				/*
-				REDUCE ½×¶ÎµÄÓïÒå·ÖÎöºËĞÄÁ÷³Ì£¨LR/SLR µÄ±ê×¼Ğ´·¨£©£º
-				- Éè²úÉúÊ½ A -> ¦Â£¬|¦Â|=n
-				1) ´Ó ValueStack µ¯³ö n ¸öÓïÒåÖµ£¬°´´Ó×óµ½ÓÒ´æÈë rhs[0..n-1]
-				   £¨×¢Òâµ¯Õ»Ë³ĞòÊÇ·´µÄ£¬ËùÒÔÕâÀïÓÃµ¹ĞòĞ´Èë£©
-				2) Óë´ËÍ¬Ê±£¬Óï·¨Õ»»áµ¯³ö n ¸ö·ûºÅÓë n ¸ö×´Ì¬£¨ÄãÔÚ SEM_IR ÍâÒÑ¾­×öÁË£©
-				3) Ö´ĞĞ¡°ÓïÒå¶¯×÷¡±£º¸ù¾İ rhs ¼ÆËã lhsVal£¨¼´ A µÄ×ÛºÏÊôĞÔ£©
-				4) ¹éÔ¼Íê³Éºó£¬°Ñ lhsVal ÔÙÑ¹»Ø ValueStack£¬Óë SymbolStack ÍÆÈë A ±£³Ö¶ÔÆë
-				*/
-				size_t n = Prod.Right.size();
-				// 1) ÊÕ¼¯ RHS µÄÓïÒåÖµ£¨´ÓÕ»¶¥µ¯³ö n ¸ö£©
-				// rhs[i] ¶ÔÓ¦²úÉúÊ½ÓÒ²¿µÚ i ¸ö·ûºÅµÄÓïÒåÖµ
-				vector<SemVal> rhs(n);
-				for (int i = (int)n - 1; i >= 0; --i) { rhs[i] = ValueStack.top(); ValueStack.pop(); }
-#endif
+				// ç”Ÿæˆä¸‰åœ°å€ç ï¼ˆåœ¨å¼¹å‡ºæ ˆä¹‹å‰ï¼Œå› ä¸ºéœ€è¦è®¿é—®è¯­ä¹‰æ ˆï¼‰
+				GenerateCode(Action.StateOrProduction, Prod);
 
-				// µ¯³öÕ»ÖĞÓë²úÉúÊ½ÓÒ²¿³¤¶ÈÏàµÈµÄ×´Ì¬ºÍ·ûºÅ
+				// å¼¹å‡ºæ ˆä¸­ä¸äº§ç”Ÿå¼å³éƒ¨é•¿åº¦ç›¸ç­‰çš„çŠ¶æ€å’Œç¬¦å·
 				for (size_t i = 0; i < Prod.Right.size(); i++)
 				{
 					StateStack.pop();
 					SymbolStack.pop();
 				}
 
-#ifdef SEM_IR
-				/*
-				lhsVal£ºµ±Ç°¹éÔ¼²úÉúÊ½×ó²¿·ÇÖÕ½á·ûµÄÓïÒåÖµ¡£
-				ÏÂÃæÕâÒ»³¤´® if/else ÊÇ¡°°´·ÇÖÕ½á·ûÃû×Ö + ²úÉúÊ½ĞÎÌ¬¡±½øĞĞµÄÓïÒå¶¯×÷·ÖÅÉ£º
-				- ±í´ïÊ½/Ïî/Òò×Ó£º×öÀàĞÍ¼ì²é²¢ Emit ¼ÆËã IR£¬Éú³É ExprVal(place=ÁÙÊ±±äÁ¿/±äÁ¿Î¨Ò»Ãû)
-				- ¹ØÏµ±í´ïÊ½£ºEmit ifxxx/goto Õ¼Î»£¬Éú³É BoolVal(truelist/falselist)
-				- ÉùÃ÷/¸³Öµ£º¸üĞÂ·ûºÅ±í + Emit '='
-				- if/while£ºBackpatch »ØÌî¿ØÖÆÁ÷Ìø×ª
-				- return£º¼ì²éÊÇ·ñÔÚº¯ÊıÄÚ + ·µ»ØÀàĞÍÆ¥Åä + Emit ret/retv
-				*/
-				SemVal lhsVal = monostate{};
-
-				auto& L = Prod.Left.Name;
-
-				// ---- Type -> int/void Ö±½ÓÍ¸´«£¨shift ÒÑÑ¹ÁË TypeVal£© :contentReference[oaicite:4]{index=4}
-				if (L == "Type") {
-					if (Is<TypeVal>(rhs[0])) lhsVal = rhs[0];
-					else if (Prod.Right[0].Name == "int") lhsVal = TypeVal{ BaseType::INT };
-					else if (Prod.Right[0].Name == "void") lhsVal = TypeVal{ BaseType::VOID };
-				}
-
-				// ---- Parameter -> Type id£º°Ñ²ÎÊıÏÈ¼Çµ½ PendingParams£¨µÈ '{' ÔÙÈë×÷ÓÃÓò£©:contentReference[oaicite:5]{index=5}
-				else if (L == "Parameter") {
-					auto tv = As<TypeVal>(rhs[0]);
-					auto idv = As<IdVal>(rhs[1]);
-					if (tv.t == BaseType::VOID) { cout << "ÓïÒå´íÎó: ²ÎÊı²»ÄÜÊÇ void: " << idv.name << " @ " << idv.pos << "\n"; return false; }
-					PendingParams.push_back({ idv.name,tv.t });
-					lhsVal = monostate{};
-				}
-
-				// ---- Factor -> id/num/(Expr) :contentReference[oaicite:6]{index=6}
-				else if (L == "Factor" && n == 1 && Prod.Right[0].Name == "id") {
-					auto idv = As<IdVal>(rhs[0]);
-					auto* sym = Lookup(idv.name);
-					if (!sym) { cout << "ÓïÒå´íÎó: Ê¹ÓÃÎ´¶¨Òå±êÊ¶·û " << idv.name << " @ " << idv.pos << "\n"; return false; }
-					if (sym->kind == SymKind::FUNC) { cout << "ÓïÒå´íÎó: ÕâÀïĞèÒª±äÁ¿¶ø²»ÊÇº¯Êı " << idv.name << " @ " << idv.pos << "\n"; return false; }
-					lhsVal = ExprVal{ sym->type,sym->irName,-1 };
-				}
-				else if (L == "Factor" && n == 1 && Prod.Right[0].Name == "num") {
-					auto nv = As<NumVal>(rhs[0]);
-					lhsVal = ExprVal{ BaseType::INT,to_string(nv.v),-1 };
-				}
-				else if (L == "Factor" && n == 3 && Prod.Right[0].Name == "(") {
-					lhsVal = rhs[1]; // ( Expr )
-				}
-
-				// ---- Term / Expr£ºËãÊõÀàĞÍ¼ì²é + Éú³ÉÁÙÊ±±äÁ¿Óë IR :contentReference[oaicite:7]{index=7}
-				else if (L == "Term" && n == 3 && (Prod.Right[1].Name == "*" || Prod.Right[1].Name == "/")) {
-					auto a = As<ExprVal>(rhs[0]), b = As<ExprVal>(rhs[2]);
-					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ³Ë³ıÖ»Ö§³Ö int\n"; return false; }
-					string t = NewTemp();
-					int idx = Emit(Prod.Right[1].Name, a.place, b.place, t);
-					int bg = (a.begin != -1) ? a.begin : idx;
-					lhsVal = ExprVal{ BaseType::INT,t,bg };
-				}
-				else if (L == "Term" && n == 1) {
-					lhsVal = rhs[0];
-				}
-				else if (L == "Expr" && n == 3 && (Prod.Right[1].Name == "+" || Prod.Right[1].Name == "-")) {
-					auto a = As<ExprVal>(rhs[0]), b = As<ExprVal>(rhs[2]);
-					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ¼Ó¼õÖ»Ö§³Ö int\n"; return false; }
-					string t = NewTemp();
-					int idx = Emit(Prod.Right[1].Name, a.place, b.place, t);
-					int bg = (a.begin != -1) ? a.begin : idx;
-					lhsVal = ExprVal{ BaseType::INT,t,bg };
-				}
-				else if (L == "Expr" && n == 1) {
-					lhsVal = rhs[0];
-				}
-
-				// ---- RelOp£º°Ñ²Ù×÷·û×Ö·û´®×ö³É OpVal :contentReference[oaicite:8]{index=8}
-				else if (L == "RelOp" && n == 1) {
-					lhsVal = OpVal{ Prod.Right[0].Name };
-				}
-
-				// ---- RelExpr£ºÉú³É if-goto / goto µÄÕ¼Î»²¢»ØÌî :contentReference[oaicite:9]{index=9}
-				else if (L == "RelExpr" && n == 3) {
-					auto a = As<ExprVal>(rhs[0]);
-					auto op = As<OpVal>(rhs[1]).op;
-					auto b = As<ExprVal>(rhs[2]);
-					if (a.t != BaseType::INT || b.t != BaseType::INT) { cout << "ÓïÒå´íÎó: ¹ØÏµÔËËãÖ»Ö§³Ö int\n"; return false; }
-					int i = Emit("if" + op, a.place, b.place, "", -1);
-					int j = Emit("goto", "", "", "", -1);
-					lhsVal = BoolVal{ {i},{j},i };
-				}
-				else if (L == "RelExpr" && n == 1) {
-					auto a = As<ExprVal>(rhs[0]);
-					if (a.t != BaseType::INT) { cout << "ÓïÒå´íÎó: Ìõ¼ş±í´ïÊ½ĞèÒª int(·ÇÁãÎªÕæ)\n"; return false; }
-					int i = Emit("ifnz", a.place, "", "", -1);
-					int j = Emit("goto", "", "", "", -1);
-					lhsVal = BoolVal{ {i},{j},i };
-				}
-
-				// ---- DeclarationStatement£º²åÈë·ûºÅ±í + ¿ÉÑ¡³õÊ¼»¯¸³Öµ :contentReference[oaicite:10]{index=10}
-				else if (L == "DeclarationStatement" && (n == 3 || n == 5)) {
-					auto tv = As<TypeVal>(rhs[0]);
-					auto idv = As<IdVal>(rhs[1]);
-					if (tv.t == BaseType::VOID) { cout << "ÓïÒå´íÎó: ±äÁ¿²»ÄÜÊÇ void: " << idv.name << " @ " << idv.pos << "\n"; return false; }
-
-					Symbol vs; vs.kind = SymKind::VAR; vs.type = tv.t; vs.irName = NewVarName(idv.name); vs.scopeLevel = (int)Scopes.size() - 1;
-					string err;
-					if (!InsertHere(idv.name, vs, err)) { cout << "ÓïÒå´íÎó: " << err << " @ " << idv.pos << "\n"; return false; }
-
-					int bg = NextQuad();
-					if (n == 5) {
-						auto e = As<ExprVal>(rhs[3]);
-						if (e.t != tv.t) { cout << "ÓïÒå´íÎó: ³õÊ¼»¯ÀàĞÍ²»Æ¥Åä " << idv.name << "\n"; return false; }
-						int idx = Emit("=", e.place, "", vs.irName);
-						bg = idx;
-					}
-					lhsVal = StmtVal{ {},bg };
-				}
-
-				// ---- AssignmentStatement£ºÎ´¶¨Òå/ÀàĞÍ¼ì²é + Éú³É¸³Öµ IR :contentReference[oaicite:11]{index=11}
-				else if (L == "AssignmentStatement" && n == 4) {
-					auto idv = As<IdVal>(rhs[0]);
-					auto* sym = Lookup(idv.name);
-					if (!sym) { cout << "ÓïÒå´íÎó: ¸³Öµ¸øÎ´¶¨Òå±êÊ¶·û " << idv.name << " @ " << idv.pos << "\n"; return false; }
-					if (sym->kind == SymKind::FUNC) { cout << "ÓïÒå´íÎó: ²»ÄÜ¸øº¯ÊıÃû¸³Öµ " << idv.name << "\n"; return false; }
-					auto e = As<ExprVal>(rhs[2]);
-					if (e.t != sym->type) { cout << "ÓïÒå´íÎó: ¸³ÖµÀàĞÍ²»Æ¥Åä " << idv.name << "\n"; return false; }
-					int idx = Emit("=", e.place, "", sym->irName);
-					lhsVal = StmtVal{ {},idx };
-				}
-
-				// ---- ExprStatement£ºExpr ; »ò ; :contentReference[oaicite:12]{index=12}
-				else if (L == "ExprStatement" && n == 2) {
-					auto e = As<ExprVal>(rhs[0]);
-					lhsVal = StmtVal{ {}, e.begin != -1 ? e.begin : NextQuad() };
-				}
-				else if (L == "ExprStatement" && n == 1) {
-					lhsVal = StmtVal{ {}, NextQuad() };
-				}
-
-				// ---- ReturnStatement£ºreturn/return Expr ÀàĞÍ¼ì²é + emit return :contentReference[oaicite:13]{index=13}
-				else if (L == "ReturnStatement" && (n == 2 || n == 3)) {
-					if (!InFunction) { cout << "ÓïÒå´íÎó: return Ö»ÄÜ³öÏÖÔÚº¯ÊıÄÚ\n"; return false; }
-					int idx = NextQuad();
-					if (n == 2) {
-						if (CurFuncRet != BaseType::VOID) { cout << "ÓïÒå´íÎó: ·Ç void º¯Êı±ØĞë return Ò»¸öÖµ\n"; return false; }
-						idx = Emit("ret");
-					}
-					else {
-						auto e = As<ExprVal>(rhs[1]);
-						if (CurFuncRet != BaseType::INT || e.t != BaseType::INT) { cout << "ÓïÒå´íÎó: return ÀàĞÍ²»Æ¥Åä\n"; return false; }
-						idx = Emit("retv", e.place);
-					}
-					lhsVal = StmtVal{ {},idx };
-				}
-
-				// ---- Stmt / StmtList£ºË³ĞòÁ¬½ÓÊ±»ØÌî nextlist :contentReference[oaicite:14]{index=14}
-				else if (L == "Stmt") {
-					lhsVal = rhs[0]; // Ö±½ÓÍ¸´«
-				}
-				else if (L == "StmtList" && n == 1) {
-					lhsVal = rhs[0];
-				}
-				else if (L == "StmtList" && n == 2) {
-					auto s1 = As<StmtVal>(rhs[0]);
-					auto s2 = As<StmtVal>(rhs[1]);
-					// s1 µÄ¡°Âä¿Õ nextlist¡±½Óµ½ s2 ¿ªÊ¼
-					Backpatch(s1.nextlist, s2.begin == -1 ? NextQuad() : s2.begin);
-					int bg = (s1.begin != -1) ? s1.begin : s2.begin;
-					lhsVal = StmtVal{ s2.nextlist,bg };
-				}
-
-				// ---- CompoundStatement£º{ } »ò { StmtList } :contentReference[oaicite:15]{index=15}
-				else if (L == "CompoundStatement" && n == 2) {
-					lhsVal = StmtVal{ {},NextQuad() };
-				}
-				else if (L == "CompoundStatement" && n == 3) {
-					lhsVal = rhs[1];
-				}
-
-				// ---- SelectionStatement£ºif/if-else£¨if-else µÄÖĞ¼ä goto ÒÑÔÚ shift else ×öÁË£© :contentReference[oaicite:16]{index=16}
-				else if (L == "SelectionStatement" && n == 5) {
-					auto B = As<BoolVal>(rhs[2]);
-					auto S = As<StmtVal>(rhs[4]);
-					Backpatch(B.truelist, S.begin == -1 ? NextQuad() : S.begin);
-					Backpatch(B.falselist, NextQuad());
-					Backpatch(S.nextlist, NextQuad());
-					lhsVal = StmtVal{ {},B.begin };
-				}
-				else if (L == "SelectionStatement" && n == 7) {
-					// if (B) S1 else S2£ºendJump ÔÚ shift else Ê± emit£¬ÕâÀïÖ»°ÑËü»ØÌîµ½ else Ö®ºó
-					auto B = As<BoolVal>(rhs[2]);
-					auto S1 = As<StmtVal>(rhs[4]);
-					auto S2 = As<StmtVal>(rhs[6]);
-
-					if (PendingIfElseEndJumps.empty()) { cout << "ÓïÒå´íÎó: if-else endJump Õ»Îª¿Õ\n"; return false; }
-					int j = PendingIfElseEndJumps.top(); PendingIfElseEndJumps.pop();
-					Backpatch({ j }, NextQuad());
-
-					Backpatch(S1.nextlist, NextQuad());
-					Backpatch(S2.nextlist, NextQuad());
-					lhsVal = StmtVal{ {},B.begin };
-				}
-
-				// ---- IterationStatement£ºwhile (B) S :contentReference[oaicite:17]{index=17}
-				else if (L == "IterationStatement" && n == 5) {
-					auto B = As<BoolVal>(rhs[2]);
-					auto S = As<StmtVal>(rhs[4]);
-					Backpatch(B.truelist, S.begin == -1 ? NextQuad() : S.begin);
-					Backpatch(S.nextlist, B.begin);
-					Emit("goto", "", "", "", B.begin);
-					Backpatch(B.falselist, NextQuad());
-					lhsVal = StmtVal{ {},B.begin };
-				}
-
-				// ÆäËû·ÇÖÕ½á·û£¨Program/GlobalDeclarations/FunctionDefinitions/FunctionDefinition/ParameterListµÈ£©
-				// ×îĞ¡»¯£ºÏÈ²»¶îÍâ×ö IR£¬Ö»Í¸´«»ò¸ø¿ÕÖµ
-				else {
-					// ³£¼ûÍ¸´«£ºA->B
-					if (n == 1) lhsVal = rhs[0];
-					else lhsVal = monostate{};
-				}
-#endif
-
-				// »ñÈ¡¹éÔ¼ºóµÄµ±Ç°×´Ì¬
+				// è·å–å½’çº¦åçš„å½“å‰çŠ¶æ€
 				int AfterReduceState = StateStack.top();
 
-				// Ñ¹Èë²úÉúÊ½×ó²¿·ûºÅ
+				// å‹å…¥äº§ç”Ÿå¼å·¦éƒ¨ç¬¦å·
 				SymbolStack.push(Prod.Left);
 
-				// ²éÕÒGOTO±í£¬»ñÈ¡ĞÂ×´Ì¬
+				// æŸ¥æ‰¾GOTOè¡¨ï¼Œè·å–æ–°çŠ¶æ€
 				int GotoState = TableBuilder.GetGoto(AfterReduceState, Prod.Left);
 				if (GotoState == -1)
 				{
-					cout << "´íÎó£ºÔÚ×´Ì¬" << AfterReduceState << "¶Ô·ÇÖÕ½á·û" << Prod.Left.Name << "µÄGOTOÎ´ÕÒµ½\n";
+					cout << "é”™è¯¯ï¼šåœ¨çŠ¶æ€" << AfterReduceState << "å¯¹éç»ˆç»“ç¬¦" << Prod.Left.Name << "çš„GOTOæœªæ‰¾åˆ°\n";
 					return false;
 				}
 
-				// Ñ¹ÈëĞÂ×´Ì¬
+				// å‹å…¥æ–°çŠ¶æ€
 				StateStack.push(GotoState);
-#ifdef SEM_IR
-				ValueStack.push(lhsVal);
-#endif
 			}
 			else if (Action.Type == SLRActionType::ACCEPT)
 			{
-				cout << "\n·ÖÎö³É¹¦£ºACCEPT\n";
+				cout << "\nåˆ†ææˆåŠŸï¼šACCEPT\n";
 				return true;
 			}
 			else
 			{
-				cout << "´íÎó£ºÔÚ×´Ì¬" << CurrentState << "¶Ô·ûºÅ" << CurrentInput.Name << "µÄACTIONÎ´ÕÒµ½\n";
+				cout << "é”™è¯¯ï¼šåœ¨çŠ¶æ€" << CurrentState << "å¯¹ç¬¦å·" << CurrentInput.Name << "çš„ACTIONæœªæ‰¾åˆ°\n";
 				return false;
 			}
-		} // while loop
+		}
 	}
 
-	// ½âÎö´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼ş
+	// è§£æè¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶
 	bool ParseFromFile(const string& tokenFile)
 	{
-		// ´ÓÎÄ¼şÖĞ¶ÁÈ¡tokens
+		// ä»æ–‡ä»¶ä¸­è¯»å–tokens
 		vector<GrammarSymbol> Tokens = LoadTokensFromFile(tokenFile);
 
 		if (Tokens.empty())
 		{
-			cout << "Î´´ÓÎÄ¼şÖĞ¶ÁÈ¡µ½ÓĞĞ§µÄtokens" << endl;
+			cout << "æœªä»æ–‡ä»¶ä¸­è¯»å–åˆ°æœ‰æ•ˆçš„tokens" << endl;
 			return false;
 		}
 
-		// Ö´ĞĞ·ÖÎö
-		cout << "\n´ÓÎÄ¼şÖĞ¶ÁÈ¡µ½µÄTokens: ";
+		// æ‰§è¡Œåˆ†æ
+		cout << "\nä»æ–‡ä»¶ä¸­è¯»å–åˆ°çš„Tokens: ";
 		for (const auto& symbol : Tokens)
 		{
 			cout << symbol.Name << " ";
 		}
 		cout << "\n";
 
-		// µ÷ÓÃParseº¯Êı½øĞĞ½âÎö
+		// è°ƒç”¨Parseå‡½æ•°è¿›è¡Œè§£æ
 		return Parse(Tokens);
 	}
 
-	// ´Ó´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼şÖĞ¶ÁÈ¡tokens²¢×ª»»ÎªGrammarSymbolÏòÁ¿
+	// ä»è¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶ä¸­è¯»å–tokenså¹¶è½¬æ¢ä¸ºGrammarSymbolå‘é‡
 	vector<GrammarSymbol> LoadTokensFromFile(const string& tokenFile)
 	{
 		vector<GrammarSymbol> Tokens;
@@ -880,7 +816,7 @@ struct ShiftReduceParser
 
 		if (!File.is_open())
 		{
-			cerr << "ÎŞ·¨´ò¿ª´Ê·¨·ÖÎöÆ÷Êä³öÎÄ¼ş: " << tokenFile << endl;
+			cerr << "æ— æ³•æ‰“å¼€è¯æ³•åˆ†æå™¨è¾“å‡ºæ–‡ä»¶: " << tokenFile << endl;
 			return Tokens;
 		}
 
@@ -889,17 +825,17 @@ struct ShiftReduceParser
 			istringstream Iss(Line);
 			string TokenTypeStr, Colon, TokenValue, Position;
 
-			// ÀàĞÍ
+			// ç±»å‹
 			if (Iss >> TokenTypeStr)
 			{
-				// ´¦ÀíENDFILE
+				// å¤„ç†ENDFILE
 				if (TokenTypeStr == "ENDFILE")
 				{
-					Iss >> Position; // Î»ÖÃ
+					Iss >> Position; // ä½ç½®
 					continue;
 				}
 
-				// ¶ÁÈ¡Ã°ºÅºÍtokenÖµ
+				// è¯»å–å†’å·å’Œtokenå€¼
 				if (Iss >> Colon && Colon == ":" && Iss >> TokenValue)
 				{
 					Iss >> Position;
@@ -911,6 +847,30 @@ struct ShiftReduceParser
 
 		File.close();
 		return Tokens;
+	}
+
+	// æ‰“å°ç”Ÿæˆçš„ä¸‰åœ°å€ç 
+	void PrintThreeAddressCode() const
+	{
+		cout << "\n========== ç”Ÿæˆçš„ä¸‰åœ°å€ç  ==========\n";
+		if (ThreeAddressCode.empty())
+		{
+			cout << "æœªç”Ÿæˆä»»ä½•ä¸‰åœ°å€ç \n";
+		}
+		else
+		{
+			for (size_t i = 0; i < ThreeAddressCode.size(); i++)
+			{
+				cout << "[" << i << "] " << ThreeAddressCode[i] << "\n";
+			}
+		}
+		cout << "===================================\n";
+	}
+
+	// è·å–ä¸‰åœ°å€ç åˆ—è¡¨
+	const vector<string>& GetThreeAddressCode() const
+	{
+		return ThreeAddressCode;
 	}
 
 };

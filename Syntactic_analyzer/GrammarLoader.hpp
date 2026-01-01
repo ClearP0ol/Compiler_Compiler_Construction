@@ -11,30 +11,30 @@
 
 using namespace std;
 
-// Óï·¨·ûºÅ£¨ÖÕ½á·û»ò·ÇÖÕ½á·û£©
+// è¯­æ³•ç¬¦å·ï¼ˆç»ˆç»“ç¬¦æˆ–éç»ˆç»“ç¬¦ï¼‰
 struct GrammarSymbol
 {
-	string Name;	  // ·ûºÅÃû
-	bool IsTerminal;  // ÊÇ·ñÎªÖÕ½á·û
-	string TokenType; // TokenÀàĞÍ
-	string Position;  // Î»ÖÃ
+	string Name;	  // ç¬¦å·å
+	bool IsTerminal;  // æ˜¯å¦ä¸ºç»ˆç»“ç¬¦
+	string TokenType; // Tokenç±»å‹
+	string Position;  // ä½ç½®
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	GrammarSymbol(const string& name = "", bool isTerminal = false, const string& tokenType = "", const string& position = "")
 		: Name(name), IsTerminal(isTerminal), TokenType(tokenType), Position(position)
 	{
 	}
 
-	// ÖØÔØ==ÔËËã·û
+	// é‡è½½==è¿ç®—ç¬¦
 	bool operator==(const GrammarSymbol& other) const
 	{
 		return Name == other.Name && IsTerminal == other.IsTerminal;
 	}
 
-	// ±ãÓÚmapÊ¹ÓÃµÄ<ÔËËã·û
+	// ä¾¿äºmapä½¿ç”¨çš„<è¿ç®—ç¬¦
 	bool operator<(const GrammarSymbol& other) const
 	{
-		// ÏÈ°´Ãû³ÆÅÅĞò£¬Èç¹ûÃû³ÆÏàÍ¬ÔÙ°´ÀàĞÍÅÅĞò
+		// å…ˆæŒ‰åç§°æ’åºï¼Œå¦‚æœåç§°ç›¸åŒå†æŒ‰ç±»å‹æ’åº
 		if (Name != other.Name)
 		{
 			return Name < other.Name;
@@ -42,30 +42,30 @@ struct GrammarSymbol
 		return IsTerminal < other.IsTerminal;
 	}
 
-	// ÖØÔØ!=ÔËËã·û
+	// é‡è½½!=è¿ç®—ç¬¦
 	bool operator!=(const GrammarSymbol& other) const
 	{
 		return !(*this == other);
 	}
 };
 
-// ²úÉúÊ½
+// äº§ç”Ÿå¼
 struct Production
 {
-	GrammarSymbol Left;			 // ×ó²¿·ÇÖÕ½á·û
-	vector<GrammarSymbol> Right; // ÓÒ²¿·ûºÅĞòÁĞ
-	int Id;						 // ²úÉúÊ½±àºÅ
+	GrammarSymbol Left;			 // å·¦éƒ¨éç»ˆç»“ç¬¦
+	vector<GrammarSymbol> Right; // å³éƒ¨ç¬¦å·åºåˆ—
+	int Id;						 // äº§ç”Ÿå¼ç¼–å·
 
-	// ¿Õ¹¹Ôì
+	// ç©ºæ„é€ 
 	Production() : Id(-1) {}
 
-	// ÊäÈë¹¹Ôì
+	// è¾“å…¥æ„é€ 
 	Production(const GrammarSymbol& left, const vector<GrammarSymbol>& right, int id = -1)
 		: Left(left), Right(right), Id(id)
 	{
 	}
 
-	// Êä³öÎª×Ö·û´®
+	// è¾“å‡ºä¸ºå­—ç¬¦ä¸²
 	string ToString() const
 	{
 		string Result = Left.Name + " -> ";
@@ -76,26 +76,26 @@ struct Production
 		return Result;
 	}
 
-	// ÊÇ·ñÎª¿Õ
+	// æ˜¯å¦ä¸ºç©º
 	bool IsEpsilon() const
 	{
-		return Right.empty() || (Right.size() == 1 && Right[0].Name == "¦Å");
+		return Right.empty() || (Right.size() == 1 && Right[0].Name == "Îµ");
 	}
 };
 
-// Óï·¨¶¨Òå
+// è¯­æ³•å®šä¹‰
 struct GrammarDefinition
 {
-	string Name;						// Óï·¨Ãû³Æ
-	GrammarSymbol StartSymbol;			// ¿ªÊ¼·ûºÅ
-	vector<GrammarSymbol> Terminals;	// ÖÕ½á·û¼¯ºÏ
-	vector<GrammarSymbol> NonTerminals; // ·ÇÖÕ½á·û¼¯ºÏ
-	vector<Production> Productions;		// ²úÉúÊ½¼¯ºÏ
+	string Name;						// è¯­æ³•åç§°
+	GrammarSymbol StartSymbol;			// å¼€å§‹ç¬¦å·
+	vector<GrammarSymbol> Terminals;	// ç»ˆç»“ç¬¦é›†åˆ
+	vector<GrammarSymbol> NonTerminals; // éç»ˆç»“ç¬¦é›†åˆ
+	vector<Production> Productions;		// äº§ç”Ÿå¼é›†åˆ
 
-	// ²éÕÒ·ûºÅ
+	// æŸ¥æ‰¾ç¬¦å·
 	GrammarSymbol FindSymbol(const string& name, bool isTerminal) const
 	{
-		// È·¶¨¼¯ºÏ
+		// ç¡®å®šé›†åˆ
 		vector<GrammarSymbol> Symbols;
 		if (isTerminal)
 		{
@@ -105,7 +105,7 @@ struct GrammarDefinition
 		{
 			Symbols = NonTerminals;
 		}
-		// ²éÕÒ
+		// æŸ¥æ‰¾
 		for (const auto& Symbol : Symbols)
 		{
 			if (Symbol.Name == name && Symbol.IsTerminal == isTerminal)
@@ -113,11 +113,11 @@ struct GrammarDefinition
 				return Symbol;
 			}
 		}
-		// Î´ÕÒµ½
+		// æœªæ‰¾åˆ°
 		return GrammarSymbol("", isTerminal);
 	}
 
-	// ÅĞ¶ÏÊÇ·ñÎªÖÕ½á·û
+	// åˆ¤æ–­æ˜¯å¦ä¸ºç»ˆç»“ç¬¦
 	bool IsTerminal(const string& name) const
 	{
 		for (const auto& Symbol : Terminals)
@@ -128,7 +128,7 @@ struct GrammarDefinition
 		return false;
 	}
 
-	// ÅĞ¶ÏÊÇ·ñÎª·ÇÖÕ½á·û
+	// åˆ¤æ–­æ˜¯å¦ä¸ºéç»ˆç»“ç¬¦
 	bool IsNonTerminal(const string& name) const
 	{
 		for (const auto& Symbol : NonTerminals)
@@ -139,7 +139,7 @@ struct GrammarDefinition
 		return false;
 	}
 
-	// »ñÈ¡Ä³¸ö×ó²¿µÄËùÓĞ²úÉúÊ½
+	// è·å–æŸä¸ªå·¦éƒ¨çš„æ‰€æœ‰äº§ç”Ÿå¼
 	vector<Production> GetProductionsByLeft(const string& leftName) const
 	{
 		vector<Production> Result;
@@ -154,12 +154,12 @@ struct GrammarDefinition
 	}
 };
 
-// Óï·¨ÎÄ¼ş¼ÓÔØÆ÷
+// è¯­æ³•æ–‡ä»¶åŠ è½½å™¨
 struct GrammarLoader
 {
 	GrammarLoader() = default;
 
-	// ´ÓÎÄ¼ş¼ÓÔØÓï·¨
+	// ä»æ–‡ä»¶åŠ è½½è¯­æ³•
 	GrammarDefinition LoadFromFile(const string& filePath)
 	{
 
@@ -167,7 +167,7 @@ struct GrammarLoader
 
 		if (filePath.empty())
 		{
-			cout << "´íÎó£ºÎÄ¼şÂ·¾¶Îª¿Õ" << endl;
+			cout << "é”™è¯¯ï¼šæ–‡ä»¶è·¯å¾„ä¸ºç©º" << endl;
 			return Grammar;
 		}
 
@@ -175,34 +175,34 @@ struct GrammarLoader
 
 		if (!File.is_open())
 		{
-			cout << "Óï·¨ÎÄ¼ş´ò¿ªÊ§°Ü£º" << filePath << endl;
+			cout << "è¯­æ³•æ–‡ä»¶æ‰“å¼€å¤±è´¥ï¼š" << filePath << endl;
 			return Grammar;
 		}
 
-		cout << "ÕıÔÚ¼ÓÔØÓï·¨ÎÄ¼ş: " << filePath << endl;
+		cout << "æ­£åœ¨åŠ è½½è¯­æ³•æ–‡ä»¶: " << filePath << endl;
 
-		string Line;	 // °´ĞĞ¶ÁÈ¡
-		int LineNum = 0; // ĞĞ¼ÆÊı
+		string Line;	 // æŒ‰è¡Œè¯»å–
+		int LineNum = 0; // è¡Œè®¡æ•°
 
 		while (getline(File, Line))
 		{
 			LineNum++;
-			Trim(Line); // È¥³ı×Ö·û´®Ê×Î²¿Õ°×
+			Trim(Line); // å»é™¤å­—ç¬¦ä¸²é¦–å°¾ç©ºç™½
 
-			// Ìø¹ı¿ÕĞĞºÍ×¢ÊÍ
+			// è·³è¿‡ç©ºè¡Œå’Œæ³¨é‡Š
 			if (Line.empty() || Line[0] == '#')
 			{
 				continue;
 			}
 
-			// ½âÎöÓï·¨Ãû³Æ
+			// è§£æè¯­æ³•åç§°
 			if (Line.find("GRAMMAR_NAME") == 0)
 			{
 				Grammar.Name = ExtractValue(Line);
 				continue;
 			}
 
-			// ½âÎö¿ªÊ¼·ûºÅ
+			// è§£æå¼€å§‹ç¬¦å·
 			if (Line.find("START_SYMBOL") == 0)
 			{
 				string StartSymbol = ExtractValue(Line);
@@ -210,24 +210,24 @@ struct GrammarLoader
 				continue;
 			}
 
-			// ¿ªÊ¼½âÎö²úÉúÊ½
+			// å¼€å§‹è§£æäº§ç”Ÿå¼
 			if (Line.find("->") != string::npos)
 			{
 				ParseProduction(Line, Grammar, LineNum);
 			}
 			else
 			{
-				// ¿ÉÄÜÊÇÒ»ĞĞÖ»°üº¬Ò»¸öÓÒ²¿£¨ĞøĞĞ£©
+				// å¯èƒ½æ˜¯ä¸€è¡ŒåªåŒ…å«ä¸€ä¸ªå³éƒ¨ï¼ˆç»­è¡Œï¼‰
 				ParseRightPartOnly(Line, Grammar, LineNum);
 			}
 		}
 
 		File.close();
 
-		// ×Ô¶¯ÊÕ¼¯ÖÕ½á·ûºÍ·ÇÖÕ½á·û
+		// è‡ªåŠ¨æ”¶é›†ç»ˆç»“ç¬¦å’Œéç»ˆç»“ç¬¦
 		CollectSymbols(Grammar);
 
-		// Îª²úÉúÊ½±àºÅ
+		// ä¸ºäº§ç”Ÿå¼ç¼–å·
 		for (size_t i = 0; i < Grammar.Productions.size(); i++)
 		{
 			Grammar.Productions[i].Id = static_cast<int>(i);
@@ -237,14 +237,14 @@ struct GrammarLoader
 		return Grammar;
 	}
 
-	// È¥³ı×Ö·û´®Ê×Î²¿Õ°×
+	// å»é™¤å­—ç¬¦ä¸²é¦–å°¾ç©ºç™½
 	static void Trim(string& str)
 	{
 		str.erase(0, str.find_first_not_of(" \t\r\n"));
 		str.erase(str.find_last_not_of(" \t\r\n") + 1);
 	}
 
-	// ÌáÈ¡Öµ
+	// æå–å€¼
 	static string ExtractValue(const string& line)
 	{
 		size_t SpacePos = line.find(' ');
@@ -256,40 +256,40 @@ struct GrammarLoader
 		return Value;
 	}
 
-	// ½âÎö²úÉúÊ½
+	// è§£æäº§ç”Ÿå¼
 	void ParseProduction(const string& line, GrammarDefinition& grammar, int lineNum)
 	{
 		size_t ArrowPos = line.find("->");
 		if (ArrowPos == string::npos)
 		{
-			cout << "error£ºµÚ " << lineNum << " ĞĞÃ»ÓĞÕÒµ½ '->' ·ûºÅ" << endl;
+			cout << "errorï¼šç¬¬ " << lineNum << " è¡Œæ²¡æœ‰æ‰¾åˆ° '->' ç¬¦å·" << endl;
 			return;
 		}
 
-		// ÌáÈ¡×ó²¿
+		// æå–å·¦éƒ¨
 		string LeftStr = line.substr(0, ArrowPos);
 		Trim(LeftStr);
 
-		// ÌáÈ¡ÓÒ²¿
+		// æå–å³éƒ¨
 		string RightStr = line.substr(ArrowPos + 2);
 		Trim(RightStr);
 
-		// ´´½¨²úÉúÊ½
+		// åˆ›å»ºäº§ç”Ÿå¼
 		Production Prod;
 		Prod.Left = GrammarSymbol(LeftStr, false);
 
-		// ½âÎöÓÒ²¿·ûºÅ
+		// è§£æå³éƒ¨ç¬¦å·
 		ParseRightSymbols(RightStr, Prod.Right);
 
 		grammar.Productions.push_back(Prod);
 	}
 
-	// ½âÎöÖ»ÓĞÓÒ²¿µÄÇé¿ö£¨ĞøĞĞ£©
+	// è§£æåªæœ‰å³éƒ¨çš„æƒ…å†µï¼ˆç»­è¡Œï¼‰
 	void ParseRightPartOnly(const string& line, GrammarDefinition& grammar, int lineNum)
 	{
 		if (grammar.Productions.empty())
 		{
-			cout << "error£ºµÚ " << lineNum << " ĞĞÃ»ÓĞ¶ÔÓ¦µÄ×ó²¿" << endl;
+			cout << "errorï¼šç¬¬ " << lineNum << " è¡Œæ²¡æœ‰å¯¹åº”çš„å·¦éƒ¨" << endl;
 			return;
 		}
 
@@ -297,7 +297,7 @@ struct GrammarLoader
 		ParseRightSymbols(line, LastProd.Right);
 	}
 
-	// ½âÎöÓÒ²¿·ûºÅ
+	// è§£æå³éƒ¨ç¬¦å·
 	void ParseRightSymbols(const string& rightStr, vector<GrammarSymbol>& symbols)
 	{
 		istringstream Iss(rightStr);
@@ -305,29 +305,29 @@ struct GrammarLoader
 
 		while (Iss >> SymbolName)
 		{
-			// ÅĞ¶Ï·ûºÅÀàĞÍ
+			// åˆ¤æ–­ç¬¦å·ç±»å‹
 			bool IsTerminal = IsTerminalSymbol(SymbolName);
 			symbols.push_back(GrammarSymbol(SymbolName, IsTerminal));
 		}
 	}
 
-	// ÅĞ¶ÏÊÇ·ñÎªÖÕ½á·û·ûºÅ
+	// åˆ¤æ–­æ˜¯å¦ä¸ºç»ˆç»“ç¬¦ç¬¦å·
 	bool IsTerminalSymbol(const string& symbol)
 	{
-		// ÔËËã·û¼¯ºÏ
+		// è¿ç®—ç¬¦é›†åˆ
 		static const vector<string> TerminalKeywords = {
-			// µ¥×Ö·ûÔËËã·û
+			// å•å­—ç¬¦è¿ç®—ç¬¦
 			"+", "-", "*", "/", "(", ")", "{", "}", ";", "=",
 			"<", ">", "!", ",", ".", "&", "|", "^", "~", "%", "?",
 			":", "[", "]",
-			// ¶à×Ö·ûÔËËã·û
+			// å¤šå­—ç¬¦è¿ç®—ç¬¦
 			"==", "!=", "<=", ">=", ":=", "++", "--",
 			"*=", "/=", "%=", "&=", "|=", "^=",
 			"<<", ">>", "<<=", ">>=",
 			"&&", "||", "->"
 		};
 
-		// ¼ì²éÊÇ·ñÔÚÔËËã·û¼¯ºÏÖĞ
+		// æ£€æŸ¥æ˜¯å¦åœ¨è¿ç®—ç¬¦é›†åˆä¸­
 		for (const auto& Keyword : TerminalKeywords)
 		{
 			if (symbol == Keyword)
@@ -336,30 +336,30 @@ struct GrammarLoader
 			}
 		}
 
-		// ×ÖÄ¸¿ªÍ·µÄÈ«Ğ¡Ğ´µÄ·ûºÅÊÇÖÕ½á·û
+		// å­—æ¯å¼€å¤´çš„å…¨å°å†™çš„ç¬¦å·æ˜¯ç»ˆç»“ç¬¦
 		if (!symbol.empty() && isalpha(symbol[0]))
 		{
 			for (char c : symbol)
 			{
 				if (isalpha(c) && !islower(c))
 				{
-					return false; // ÓĞ´óĞ´×ÖÄ¸£¬ÊÇ·ÇÖÕ½á·û
+					return false; // æœ‰å¤§å†™å­—æ¯ï¼Œæ˜¯éç»ˆç»“ç¬¦
 				}
 			}
-			return true; // È«Ğ¡Ğ´£¬ÊÇÖÕ½á·û
+			return true; // å…¨å°å†™ï¼Œæ˜¯ç»ˆç»“ç¬¦
 		}
 
 		return false;
 	}
 
-	// Ìí¼Ó·ûºÅµ½ÏàÓ¦¼¯ºÏ
+	// æ·»åŠ ç¬¦å·åˆ°ç›¸åº”é›†åˆ
 	void AddSymbolIfNotExists(const GrammarSymbol& sym, GrammarDefinition& grammar)
 	{
-		// Èç¹ûÎª¿Õ
+		// å¦‚æœä¸ºç©º
 		if (sym.Name.empty())
 			return;
 
-		// Èç¹ûÒÑ¾­Ìí¼Ó
+		// å¦‚æœå·²ç»æ·»åŠ 
 		for (const auto& Existing : grammar.Terminals)
 		{
 			if (Existing.Name == sym.Name)
@@ -381,23 +381,23 @@ struct GrammarLoader
 		}
 	}
 
-	// ÊÕ¼¯ËùÓĞ·ûºÅ
+	// æ”¶é›†æ‰€æœ‰ç¬¦å·
 	void CollectSymbols(GrammarDefinition& grammar)
 	{
 
-		// Ê×ÏÈÌí¼ÓÆğÊ¼·ûºÅÎª·ÇÖÕ½á·û
+		// é¦–å…ˆæ·»åŠ èµ·å§‹ç¬¦å·ä¸ºéç»ˆç»“ç¬¦
 		if (!grammar.StartSymbol.Name.empty())
 		{
 			grammar.NonTerminals.push_back(grammar.StartSymbol);
 		}
 
-		// ´Ó²úÉúÊ½ÖĞÊÕ¼¯·ûºÅ
+		// ä»äº§ç”Ÿå¼ä¸­æ”¶é›†ç¬¦å·
 		for (const auto& prod : grammar.Productions)
 		{
-			// ×ó²¿·ûºÅ
+			// å·¦éƒ¨ç¬¦å·
 			AddSymbolIfNotExists(prod.Left, grammar);
 
-			// ÓÒ²¿·ûºÅ
+			// å³éƒ¨ç¬¦å·
 			for (const auto& sym : prod.Right)
 			{
 				AddSymbolIfNotExists(sym, grammar);
@@ -405,26 +405,26 @@ struct GrammarLoader
 		}
 	}
 
-	// ´òÓ¡Óï·¨ÕªÒª
+	// æ‰“å°è¯­æ³•æ‘˜è¦
 	void PrintGrammarSummary(const GrammarDefinition& grammar)
 	{
 		cout << endl
-			<< "Óï·¨¼ÓÔØÍê³É¡£" << endl;
-		cout << "Óï·¨Ãû³Æ: " << grammar.Name << endl;
-		cout << "¿ªÊ¼·ûºÅ: " << grammar.StartSymbol.Name << endl;
-		cout << "·ÇÖÕ½á·û (" << grammar.NonTerminals.size() << " ¸ö): ";
+			<< "è¯­æ³•åŠ è½½å®Œæˆã€‚" << endl;
+		cout << "è¯­æ³•åç§°: " << grammar.Name << endl;
+		cout << "å¼€å§‹ç¬¦å·: " << grammar.StartSymbol.Name << endl;
+		cout << "éç»ˆç»“ç¬¦ (" << grammar.NonTerminals.size() << " ä¸ª): ";
 		for (const auto& nt : grammar.NonTerminals)
 		{
 			cout << nt.Name << " ";
 		}
 		cout << endl
-			<< "ÖÕ½á·û (" << grammar.Terminals.size() << " ¸ö): ";
+			<< "ç»ˆç»“ç¬¦ (" << grammar.Terminals.size() << " ä¸ª): ";
 		for (const auto& t : grammar.Terminals)
 		{
 			cout << t.Name << " ";
 		}
 		cout << endl
-			<< "²úÉúÊ½ (" << grammar.Productions.size() << " ¸ö):" << endl;
+			<< "äº§ç”Ÿå¼ (" << grammar.Productions.size() << " ä¸ª):" << endl;
 
 		for (size_t i = 0; i < grammar.Productions.size(); i++)
 		{

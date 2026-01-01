@@ -1,78 +1,29 @@
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=2,code=_sab = t1","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=2,codeSize=3,rightSize=1,attrsSize=1","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=2,codeSize=3","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:432","message":"while stmtStart before adjustment","hypothesisId":"A,E","data":"stmtStart=2,stmt.CodeStartPos=2,stmt.Type=stmt_start,codeSize=3","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:432","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = _sab < 10;[1]t1 = _sab + 1;[2]_sab = t1;","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=0,stmtStart=2","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=1","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=1,codeSize=2,loopLabel=L0","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"_sab = t1","timestamp":1767195830}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=8,code=a = 2","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=8,codeSize=9,rightSize=1,attrsSize=1","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=8,codeSize=9","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=11,codeSize=11,rightSize=1,attrsSize=1","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11","timestamp":1767195831}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=2,code=_sab = t1","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=2,codeSize=3,rightSize=1,attrsSize=1","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=2,codeSize=3","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=1,relExprEnd=1,stmt.CodeStartPos=2,codeSize=3","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = _sab < 10;[1]t1 = _sab + 1;[2]_sab = t1;","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=0,stmtStart=1","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=0","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=0,codeSize=2,loopLabel=L0","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t1 = _sab + 1","timestamp":1767196059}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=8,code=a = 2","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=8,codeSize=9,rightSize=1,attrsSize=1","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=8,codeSize=9","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=11,codeSize=11,rightSize=1,attrsSize=1","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=11","timestamp":1767196060}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=3,code=_sab = t2","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=3,codeSize=4,rightSize=1,attrsSize=1","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=3,codeSize=4","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=2,relExprEnd=2,stmt.CodeStartPos=3,codeSize=4","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = 10 + b;[1]t1 = _sab < t0;[2]t2 = _sab + 1;[3]_sab = t2;","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=1,stmtStart=2","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=1","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=1,codeSize=3,loopLabel=L0","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t2 = _sab + 1","timestamp":1767201047}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=9,code=a = 2","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=9,codeSize=10,rightSize=1,attrsSize=1","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=9,codeSize=10","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=12,codeSize=12,rightSize=1,attrsSize=1","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=12,rightSize=2,attrsSize=2","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=12,rightSize=2,attrsSize=2","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=12,rightSize=2,attrsSize=2","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=0,codeSize=12","timestamp":1767201048}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=3,code=_sab = t2","timestamp":1767201161}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=6,code=sab = t4","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=6,codeSize=7,rightSize=1,attrsSize=1","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=6,codeSize=7","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=5,relExprEnd=5,stmt.CodeStartPos=6,codeSize=7","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = 10 + b;[1]t1 = _sab < t0;[2]t2 = _sab + 1;[3]_sab = t2;[4]t3 = sab < 20;[5]t4 = sab + 2;[6]sab = t4;","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=4,stmtStart=5","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=4","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=4,codeSize=6,loopLabel=L0","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t4 = sab + 2","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=3,codeSize=11,rightSize=1,attrsSize=1","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=3,codeSize=11,rightSize=2,attrsSize=2","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=3,codeSize=11","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=2,relExprEnd=2,stmt.CodeStartPos=3,codeSize=11","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = 10 + b;[1]t1 = _sab < t0;[2]t2 = _sab + 1;[3]_sab = t2;[4]L0:;[5]t5 = sab < 20;[6]if t5 == 0 goto L1;[7]t4 = sab + 2;[8]sab = t4;[9]goto L0;","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=1,stmtStart=2","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=1","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=1,codeSize=10,loopLabel=L2","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t2 = _sab + 1","timestamp":1767201162}
-{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=16,code=a = 2","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=17,rightSize=1,attrsSize=1","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=17","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=19,codeSize=19,rightSize=1,attrsSize=1","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=15,codeSize=19,rightSize=2,attrsSize=2","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=15,codeSize=19,rightSize=2,attrsSize=2","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=15,codeSize=19,rightSize=2,attrsSize=2","timestamp":1767201163}
-{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=15,codeSize=19","timestamp":1767201163}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=1,codeSize=1,rightSize=1,attrsSize=1","timestamp":1767261031}
+{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=1,codeSize=1","timestamp":1767261031}
+{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=4,code=_sab = t3","timestamp":1767261032}
+{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=7,code=_sab = t5","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=7,codeSize=8,rightSize=1,attrsSize=1","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=7,codeSize=8","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=6,relExprEnd=6,stmt.CodeStartPos=7,codeSize=8","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = param + 1;[1]t1 = 10 + b;[2]t2 = _sab < t1;[3]t3 = _sab + 1;[4]_sab = t3;[5]t4 = _sab < 20;[6]t5 = _sab + 2;[7]_sab = t5;","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=5,stmtStart=6","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=5","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=5,codeSize=7,loopLabel=L0","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t5 = _sab + 2","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=4,codeSize=12,rightSize=1,attrsSize=1","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=4,codeSize=12,rightSize=2,attrsSize=2","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=4,codeSize=12","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"while stmtStart after finding loop body start","hypothesisId":"A,E","data":"stmtStart=3,relExprEnd=3,stmt.CodeStartPos=4,codeSize=12","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"code before while","hypothesisId":"A,E","data":"[0]t0 = param + 1;[1]t1 = 10 + b;[2]t2 = _sab < t1;[3]t3 = _sab + 1;[4]_sab = t3;[5]L0:;[6]t6 = _sab < 20;[7]if t6 == 0 goto L1;[8]t5 = _sab + 2;[9]_sab = t5;","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:455","message":"before delete RelExpr","hypothesisId":"C","data":"relExprStart=2,stmtStart=3","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:460","message":"after delete RelExpr","hypothesisId":"C","data":"stmtStart=2","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:486","message":"before insert L0","hypothesisId":"A,E","data":"stmtStart=2,codeSize=11,loopLabel=L2","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:486","message":"code at stmtStart","hypothesisId":"A,E","data":"t3 = _sab + 1","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:211","message":"AssignmentStatement codeStart","hypothesisId":"B","data":"codeStart=17,code=a = 2","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=17,codeSize=18,rightSize=1,attrsSize=1","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=17,codeSize=18","timestamp":1767261033}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=20,codeSize=20,rightSize=1,attrsSize=1","timestamp":1767261034}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=20,rightSize=2,attrsSize=2","timestamp":1767261034}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=20,rightSize=2,attrsSize=2","timestamp":1767261034}
+{"location":"ShiftReduceParser.hpp:620","message":"StmtList codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=20,rightSize=2,attrsSize=2","timestamp":1767261034}
+{"location":"ShiftReduceParser.hpp:540","message":"CompoundStatement codeStart","hypothesisId":"D","data":"codeStart=16,codeSize=20","timestamp":1767261034}

@@ -7,28 +7,28 @@
 
 using namespace std;
 
-// LR×´Ì¬
+// LRçŠ¶æ€
 struct LRState
 {
-	int StateId;				  // ×´Ì¬±àºÅ
-	set<LRItem> Items;			  // ÏîÄ¿¼¯
-	map<string, int> Transitions; // GOTOº¯Êı£º·ûºÅ -> ÏÂÒ»×´Ì¬
+	int StateId;				  // çŠ¶æ€ç¼–å·
+	set<LRItem> Items;			  // é¡¹ç›®é›†
+	map<string, int> Transitions; // GOTOå‡½æ•°ï¼šç¬¦å· -> ä¸‹ä¸€çŠ¶æ€
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	LRState() : StateId(-1) {}
 	LRState(int Id, const set<LRItem> &Items) : StateId(Id), Items(Items) {}
 
-	// Ìí¼Ó×ªÒÆ
+	// æ·»åŠ è½¬ç§»
 	void AddTransition(const string &SymbolName, int NextStateId)
 	{
 		if (NextStateId < 0)
 		{
-			throw invalid_argument("ÎŞĞ§µÄÏÂÒ»×´Ì¬ID: " + to_string(NextStateId));
+			throw invalid_argument("æ— æ•ˆçš„ä¸‹ä¸€çŠ¶æ€ID: " + to_string(NextStateId));
 		}
 		Transitions[SymbolName] = NextStateId;
 	}
 
-	// »ñÈ¡×ªÒÆ×´Ì¬
+	// è·å–è½¬ç§»çŠ¶æ€
 	int GetTransition(const string &SymbolName) const
 	{
 		auto It = Transitions.find(SymbolName);
@@ -36,27 +36,27 @@ struct LRState
 		{
 			return It->second;
 		}
-		return -1; // ÎŞ×ªÒÆ
+		return -1; // æ— è½¬ç§»
 	}
 
-	// ´òÓ¡×´Ì¬
+	// æ‰“å°çŠ¶æ€
 	void Print() const
 	{
-		cout << "×´Ì¬ " << StateId << ":" << endl;
+		cout << "çŠ¶æ€ " << StateId << ":" << endl;
 
-		// Ìí¼ÓÏîÄ¿¼¯
+		// æ·»åŠ é¡¹ç›®é›†
 		for (const auto &Item : Items)
 		{
 			cout << "  " << Item.ToString() << endl;
 		}
 
-		// Ìí¼Ó×ªÒÆĞÅÏ¢
+		// æ·»åŠ è½¬ç§»ä¿¡æ¯
 		if (!Transitions.empty())
 		{
-			cout << "  ×ªÒÆ:" << endl;
+			cout << "  è½¬ç§»:" << endl;
 			for (const auto &Trans : Transitions)
 			{
-				cout << "    ÔÚ " << Trans.first << " ÉÏ×ªµ½×´Ì¬ " << Trans.second << endl;
+				cout << "    åœ¨ " << Trans.first << " ä¸Šè½¬åˆ°çŠ¶æ€ " << Trans.second << endl;
 			}
 		}
 
@@ -64,43 +64,43 @@ struct LRState
 	}
 };
 
-// LR(0)×Ô¶¯»ú¹¹½¨Æ÷
+// LR(0)è‡ªåŠ¨æœºæ„å»ºå™¨
 struct LRAutomatonBuilder
 {
-	const GrammarDefinition &OriginalGrammar; // Ô­Ê¼Óï·¨
-	GrammarDefinition AugmentedGrammar;		  // Ôö¹ãÓï·¨
-	vector<LRState> States;					  // ËùÓĞ×´Ì¬
-	map<set<LRItem>, int> StateMap;			  // ÏîÄ¿¼¯ -> ×´Ì¬IDÓ³Éä
-	int NextStateId;						  // ÏÂÒ»¸ö×´Ì¬ID
+	const GrammarDefinition &OriginalGrammar; // åŸå§‹è¯­æ³•
+	GrammarDefinition AugmentedGrammar;		  // å¢å¹¿è¯­æ³•
+	vector<LRState> States;					  // æ‰€æœ‰çŠ¶æ€
+	map<set<LRItem>, int> StateMap;			  // é¡¹ç›®é›† -> çŠ¶æ€IDæ˜ å°„
+	int NextStateId;						  // ä¸‹ä¸€ä¸ªçŠ¶æ€ID
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	LRAutomatonBuilder(const GrammarDefinition &Grammar)
 		: OriginalGrammar(Grammar), NextStateId(0)
 	{
-		// ´´½¨Ôö¹ãÓï·¨
+		// åˆ›å»ºå¢å¹¿è¯­æ³•
 		CreateAugmentedGrammar();
 		Build();
 	}
 
-	// ¹¹½¨LR(0)×Ô¶¯»ú
+	// æ„å»ºLR(0)è‡ªåŠ¨æœº
 	void Build()
 	{
-		// Çå¿ÕÖ®Ç°µÄ×´Ì¬
+		// æ¸…ç©ºä¹‹å‰çš„çŠ¶æ€
 		States.clear();
 		StateMap.clear();
 		NextStateId = 0;
 
-		// È·±£ÓĞÔö¹ãÓï·¨
+		// ç¡®ä¿æœ‰å¢å¹¿è¯­æ³•
 		if (AugmentedGrammar.Productions.empty())
 		{
-			throw runtime_error("Ôö¹ãÓï·¨Îª¿Õ£¬ÎŞ·¨¹¹½¨×Ô¶¯»ú");
+			throw runtime_error("å¢å¹¿è¯­æ³•ä¸ºç©ºï¼Œæ— æ³•æ„å»ºè‡ªåŠ¨æœº");
 		}
 
-		// ´´½¨³õÊ¼ÏîÄ¿¼¯
+		// åˆ›å»ºåˆå§‹é¡¹ç›®é›†
 		set<LRItem> InitialItems = GetInitialItems();
 		int InitialStateId = AddState(InitialItems);
 
-		// Ê¹ÓÃ¶ÓÁĞ½øĞĞ¹ã¶ÈÓÅÏÈËÑË÷
+		// ä½¿ç”¨é˜Ÿåˆ—è¿›è¡Œå¹¿åº¦ä¼˜å…ˆæœç´¢
 		queue<int> StateQueue;
 		StateQueue.push(InitialStateId);
 
@@ -109,7 +109,7 @@ struct LRAutomatonBuilder
 			int CurrentStateId = StateQueue.front();
 			StateQueue.pop();
 
-			// ÊÕ¼¯ËùÓĞ¿ÉÄÜµÄ×ªÒÆ·ûºÅ£¨Ô²µãºóµÄ·ûºÅ£©
+			// æ”¶é›†æ‰€æœ‰å¯èƒ½çš„è½¬ç§»ç¬¦å·ï¼ˆåœ†ç‚¹åçš„ç¬¦å·ï¼‰
 			map<string, set<LRItem>> SymbolTransitions;
 
 			for (const auto &Item : States[CurrentStateId].Items)
@@ -117,47 +117,47 @@ struct LRAutomatonBuilder
 				const GrammarSymbol *NextSymbol = Item.GetSymbolAfterDot();
 				if (NextSymbol != nullptr)
 				{
-					// ¶ÔÓÚÃ¿¸öÔ²µãºóµÄ·ûºÅ£¬ÊÕ¼¯¿É×ªÒÆµÄÏîÄ¿
+					// å¯¹äºæ¯ä¸ªåœ†ç‚¹åçš„ç¬¦å·ï¼Œæ”¶é›†å¯è½¬ç§»çš„é¡¹ç›®
 					LRItem NextItem = Item.GetNextItem();
 					SymbolTransitions[NextSymbol->Name].insert(NextItem);
 				}
 			}
 
-			// ¶ÔÃ¿¸ö×ªÒÆ·ûºÅ£¬¼ÆËã±Õ°ü²¢´´½¨ĞÂ×´Ì¬
+			// å¯¹æ¯ä¸ªè½¬ç§»ç¬¦å·ï¼Œè®¡ç®—é—­åŒ…å¹¶åˆ›å»ºæ–°çŠ¶æ€
 			for (const auto &TransPair : SymbolTransitions)
 			{
 				const string &SymbolName = TransPair.first;
 				const set<LRItem> &KernelItems = TransPair.second;
 
-				// ¼ÆËã±Õ°ü
+				// è®¡ç®—é—­åŒ…
 				set<LRItem> NewItemSet = Closure(KernelItems);
 
-				// ¼ì²éÊÇ·ñÒÑ´æÔÚÏàÍ¬ÏîÄ¿¼¯µÄ×´Ì¬
+				// æ£€æŸ¥æ˜¯å¦å·²å­˜åœ¨ç›¸åŒé¡¹ç›®é›†çš„çŠ¶æ€
 				int TargetStateId = FindStateId(NewItemSet);
 				if (TargetStateId == -1)
 				{
-					// ĞÂ×´Ì¬
+					// æ–°çŠ¶æ€
 					TargetStateId = AddState(NewItemSet);
 					StateQueue.push(TargetStateId);
 				}
 
-				// Ìí¼Ó×ªÒÆ
+				// æ·»åŠ è½¬ç§»
 				States[CurrentStateId].AddTransition(SymbolName, TargetStateId);
 			}
 		}
 	}
 
-	// ÅĞ¶ÏÓï·¨ÊÇ·ñÒÑ¾­±»Ôö¹ã
+	// åˆ¤æ–­è¯­æ³•æ˜¯å¦å·²ç»è¢«å¢å¹¿
 	bool IsGrammarAlreadyAugmented(const GrammarDefinition &Grammar) const
 	{
-		// Èç¹û¿ªÊ¼·ûºÅÒÔ ' ½áÎ²£¬ËµÃ÷ÒÑ¾­Ôö¹ã
+		// å¦‚æœå¼€å§‹ç¬¦å·ä»¥ ' ç»“å°¾ï¼Œè¯´æ˜å·²ç»å¢å¹¿
 		if (!Grammar.StartSymbol.Name.empty() &&
 			Grammar.StartSymbol.Name.back() == '\'')
 		{
 			return true;
 		}
 
-		// ¼ì²éÊÇ·ñ´æÔÚÔö¹ã²úÉúÊ½ S' -> S
+		// æ£€æŸ¥æ˜¯å¦å­˜åœ¨å¢å¹¿äº§ç”Ÿå¼ S' -> S
 		string ExpectedAugSymbol = Grammar.StartSymbol.Name + "'";
 		for (const auto &Prod : Grammar.Productions)
 		{
@@ -172,22 +172,22 @@ struct LRAutomatonBuilder
 		return false;
 	}
 
-	// »ñÈ¡ÌØ¶¨×´Ì¬
+	// è·å–ç‰¹å®šçŠ¶æ€
 	const LRState &GetState(int StateId) const
 	{
 		if (StateId < 0 || StateId >= (int)States.size())
 		{
-			throw out_of_range("ÎŞĞ§µÄ×´Ì¬ID: " + to_string(StateId));
+			throw out_of_range("æ— æ•ˆçš„çŠ¶æ€ID: " + to_string(StateId));
 		}
 		return States[StateId];
 	}
 
-	// ´òÓ¡Õû¸ö×Ô¶¯»ú
+	// æ‰“å°æ•´ä¸ªè‡ªåŠ¨æœº
 	void PrintAutomaton() const
 	{
-		cout << "\nLR(0)×Ô¶¯»ú" << endl;
-		cout << "×´Ì¬×ÜÊı: " << States.size() << endl;
-		cout << "Ôö¹ãÓï·¨¿ªÊ¼·ûºÅ: " << AugmentedGrammar.StartSymbol.Name << endl;
+		cout << "\nLR(0)è‡ªåŠ¨æœº" << endl;
+		cout << "çŠ¶æ€æ€»æ•°: " << States.size() << endl;
+		cout << "å¢å¹¿è¯­æ³•å¼€å§‹ç¬¦å·: " << AugmentedGrammar.StartSymbol.Name << endl;
 
 		for (const auto &State : States)
 		{
@@ -195,53 +195,53 @@ struct LRAutomatonBuilder
 		}
 	}
 
-	// ´´½¨Ôö¹ãÓï·¨£¨Ìí¼ÓĞÂµÄ¿ªÊ¼·ûºÅ S' -> S£©
+	// åˆ›å»ºå¢å¹¿è¯­æ³•ï¼ˆæ·»åŠ æ–°çš„å¼€å§‹ç¬¦å· S' -> Sï¼‰
 	void CreateAugmentedGrammar()
 	{
-		// ¼ì²éÊÇ·ñÒÑ¾­ÊÇÔö¹ãÓï·¨
+		// æ£€æŸ¥æ˜¯å¦å·²ç»æ˜¯å¢å¹¿è¯­æ³•
 		if (IsGrammarAlreadyAugmented(OriginalGrammar))
 		{
 			AugmentedGrammar = OriginalGrammar;
-			cout << "Óï·¨ÒÑ¾­ÊÇÔö¹ãĞÎÊ½¡£" << endl;
+			cout << "è¯­æ³•å·²ç»æ˜¯å¢å¹¿å½¢å¼ã€‚" << endl;
 			return;
 		}
 
-		// ¸´ÖÆÔ­Ê¼Óï·¨
+		// å¤åˆ¶åŸå§‹è¯­æ³•
 		AugmentedGrammar = OriginalGrammar;
 
-		// ´´½¨ĞÂµÄ¿ªÊ¼·ûºÅ
+		// åˆ›å»ºæ–°çš„å¼€å§‹ç¬¦å·
 		GrammarSymbol NewStart(OriginalGrammar.StartSymbol.Name + "'", false);
 		AugmentedGrammar.StartSymbol = NewStart;
 
-		// Ìí¼ÓĞÂµÄ¿ªÊ¼·ûºÅµ½·ÇÖÕ½á·û
+		// æ·»åŠ æ–°çš„å¼€å§‹ç¬¦å·åˆ°éç»ˆç»“ç¬¦
 		AugmentedGrammar.NonTerminals.push_back(NewStart);
 
-		// Ìí¼ÓĞÂµÄ²úÉúÊ½£ºS' -> S
+		// æ·»åŠ æ–°çš„äº§ç”Ÿå¼ï¼šS' -> S
 		Production NewProd;
 		NewProd.Left = NewStart;
 		NewProd.Right.push_back(OriginalGrammar.StartSymbol);
-		NewProd.Id = 0; // ÉèÖÃÎªµÚÒ»¸ö²úÉúÊ½
+		NewProd.Id = 0; // è®¾ç½®ä¸ºç¬¬ä¸€ä¸ªäº§ç”Ÿå¼
 
-		// ²åÈëµ½²úÉúÊ½ÁĞ±íµÄ¿ªÍ·
+		// æ’å…¥åˆ°äº§ç”Ÿå¼åˆ—è¡¨çš„å¼€å¤´
 		AugmentedGrammar.Productions.insert(
 			AugmentedGrammar.Productions.begin(),
 			NewProd);
 
-		// ÖØĞÂ±àºÅËùÓĞ²úÉúÊ½
+		// é‡æ–°ç¼–å·æ‰€æœ‰äº§ç”Ÿå¼
 		for (size_t i = 0; i < AugmentedGrammar.Productions.size(); i++)
 		{
 			AugmentedGrammar.Productions[i].Id = static_cast<int>(i);
 		}
 
-		cout << "ÒÑ´´½¨Ôö¹ãÓï·¨£¬ĞÂ¿ªÊ¼·ûºÅ: " << NewStart.Name << endl;
+		cout << "å·²åˆ›å»ºå¢å¹¿è¯­æ³•ï¼Œæ–°å¼€å§‹ç¬¦å·: " << NewStart.Name << endl;
 	}
 
-	// »ñÈ¡³õÊ¼ÏîÄ¿¼¯
+	// è·å–åˆå§‹é¡¹ç›®é›†
 	set<LRItem> GetInitialItems() const
 	{
 		set<LRItem> Items;
 
-		// ÕÒµ½ËùÓĞÒÔÔö¹ã¿ªÊ¼·ûºÅÎª×ó²¿µÄ²úÉúÊ½
+		// æ‰¾åˆ°æ‰€æœ‰ä»¥å¢å¹¿å¼€å§‹ç¬¦å·ä¸ºå·¦éƒ¨çš„äº§ç”Ÿå¼
 		for (const auto &Prod : AugmentedGrammar.Productions)
 		{
 			if (Prod.Left.Name == AugmentedGrammar.StartSymbol.Name)
@@ -253,7 +253,7 @@ struct LRAutomatonBuilder
 		return Closure(Items);
 	}
 
-	// ¼ÆËãÏîÄ¿¼¯µÄ±Õ°ü
+	// è®¡ç®—é¡¹ç›®é›†çš„é—­åŒ…
 	set<LRItem> Closure(const set<LRItem> &Items) const
 	{
 		set<LRItem> ClosureSet = Items;
@@ -264,13 +264,13 @@ struct LRAutomatonBuilder
 			Changed = false;
 			set<LRItem> NewItems;
 
-			// ¶ÔÓÚClosureSetÖĞµÄÃ¿¸öÏîÄ¿ A -> ¦Á?B¦Â
+			// å¯¹äºClosureSetä¸­çš„æ¯ä¸ªé¡¹ç›® A -> Î±â€¢BÎ²
 			for (const auto &Item : ClosureSet)
 			{
 				const GrammarSymbol *SymbolAfterDot = Item.GetSymbolAfterDot();
 				if (SymbolAfterDot != nullptr && !SymbolAfterDot->IsTerminal)
 				{
-					// BÊÇ·ÇÖÕ½á·û£¬Ìí¼ÓËùÓĞ B -> ?¦Ã µ½±Õ°ü
+					// Bæ˜¯éç»ˆç»“ç¬¦ï¼Œæ·»åŠ æ‰€æœ‰ B -> â€¢Î³ åˆ°é—­åŒ…
 					for (const auto &Prod : AugmentedGrammar.Productions)
 					{
 						if (Prod.Left.Name == SymbolAfterDot->Name)
@@ -287,7 +287,7 @@ struct LRAutomatonBuilder
 				}
 			}
 
-			// Ìí¼ÓĞÂÏîÄ¿µ½±Õ°ü
+			// æ·»åŠ æ–°é¡¹ç›®åˆ°é—­åŒ…
 			for (const auto &Item : NewItems)
 			{
 				ClosureSet.insert(Item);
@@ -298,7 +298,7 @@ struct LRAutomatonBuilder
 		return ClosureSet;
 	}
 
-	// Ìí¼ÓĞÂ×´Ì¬
+	// æ·»åŠ æ–°çŠ¶æ€
 	int AddState(const set<LRItem> &Items)
 	{
 		int StateId = NextStateId++;
@@ -307,7 +307,7 @@ struct LRAutomatonBuilder
 		return StateId;
 	}
 
-	// »ñÈ¡ÏîÄ¿¼¯¶ÔÓ¦µÄ×´Ì¬ID£¨Èç¹û´æÔÚ£©
+	// è·å–é¡¹ç›®é›†å¯¹åº”çš„çŠ¶æ€IDï¼ˆå¦‚æœå­˜åœ¨ï¼‰
 	int FindStateId(const set<LRItem> &Items) const
 	{
 		auto It = StateMap.find(Items);
@@ -315,7 +315,7 @@ struct LRAutomatonBuilder
 		{
 			return It->second;
 		}
-		return -1; // ²»´æÔÚ
+		return -1; // ä¸å­˜åœ¨
 	}
 };
 
