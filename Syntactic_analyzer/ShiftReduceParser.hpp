@@ -718,7 +718,8 @@ struct ShiftReduceParser
 					auto e = As<ExprVal>(rhs[2]);
 					if (e.t != sym->type) { cout << "语义错误: 赋值类型不匹配 " << idv.name << "\n"; return false; }
 					int idx = Emit("=", e.place, "", sym->irName);
-					lhsVal = StmtVal{ {},idx };
+					int bg = (e.begin != -1) ? e.begin : idx;
+					lhsVal = StmtVal{ {}, bg };
 				}
 
 				// ---- ExprStatement：Expr ; 或 ; :contentReference[oaicite:12]{index=12}
