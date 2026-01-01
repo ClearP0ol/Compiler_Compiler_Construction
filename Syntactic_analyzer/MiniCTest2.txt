@@ -3,12 +3,12 @@ int b = 1;
 int main()
 {
     int _sab = 0;
-    while (_sab < 10 + b )
+    while ( _sab < 10 + b )
     {
-        _sab = _sab + 1;
-	while( sab < 20 )
+     	_sab = _sab + 1;
+	while( _sab < 20 )
 	{
-		sab = sab + 2;
+		_sab =_sab + 2;
 	}
     }
     if (a != 2)

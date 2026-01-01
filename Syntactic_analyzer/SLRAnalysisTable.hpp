@@ -12,28 +12,28 @@
 
 using namespace std;
 
-// SLR·ÖÎö±í¶¯×÷ÀàĞÍ
+// SLRåˆ†æè¡¨åŠ¨ä½œç±»å‹
 enum class SLRActionType
 {
-	SHIFT,	// ÒÆ½ø
-	REDUCE, // ¹æÔ¼
-	ACCEPT, // ½ÓÊÜ
-	ERROR	// ´íÎó
+	SHIFT,	// ç§»è¿›
+	REDUCE, // è§„çº¦
+	ACCEPT, // æ¥å—
+	ERROR	// é”™è¯¯
 };
 
-// SLR·ÖÎö±í¶¯×÷
+// SLRåˆ†æè¡¨åŠ¨ä½œ
 struct SLRAction
 {
 	SLRActionType Type;
-	int StateOrProduction; // ×´Ì¬±àºÅ£¨ÒÆ½ø£©»ò²úÉúÊ½±àºÅ£¨¹æÔ¼£©
+	int StateOrProduction; // çŠ¶æ€ç¼–å·ï¼ˆç§»è¿›ï¼‰æˆ–äº§ç”Ÿå¼ç¼–å·ï¼ˆè§„çº¦ï¼‰
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	SLRAction(SLRActionType type = SLRActionType::ERROR, int value = -1)
 		: Type(type), StateOrProduction(value)
 	{
 	}
 
-	// ×ª»»Îª×Ö·û´®
+	// è½¬æ¢ä¸ºå­—ç¬¦ä¸²
 	string ToString() const
 	{
 		if (Type == SLRActionType::SHIFT)
@@ -55,20 +55,20 @@ struct SLRAction
 	}
 };
 
-// SLR·ÖÎö±íÉú³ÉÆ÷
+// SLRåˆ†æè¡¨ç”Ÿæˆå™¨
 struct SLRAnalysisTableBuilder
 {
 	const LRAutomatonBuilder &AutomatonBuilder;
 	const FirstFollowCalculator &FFCalculator;
 	const GrammarDefinition &Grammar;
 
-	// ACTION±í£º×´Ì¬ ¡Á ÖÕ½á·û ¡ú ¶¯×÷
+	// ACTIONè¡¨ï¼šçŠ¶æ€ Ã— ç»ˆç»“ç¬¦ â†’ åŠ¨ä½œ
 	map<pair<int, GrammarSymbol>, SLRAction> ActionTable;
 
-	// GOTO±í£º×´Ì¬ ¡Á ·ÇÖÕ½á·û ¡ú ×´Ì¬
+	// GOTOè¡¨ï¼šçŠ¶æ€ Ã— éç»ˆç»“ç¬¦ â†’ çŠ¶æ€
 	map<pair<int, GrammarSymbol>, int> GotoTable;
 
-	// ¹¹Ôìº¯Êı
+	// æ„é€ å‡½æ•°
 	SLRAnalysisTableBuilder(const LRAutomatonBuilder &automatonBuilder,
 							const FirstFollowCalculator &ffCalculator)
 		: AutomatonBuilder(automatonBuilder),
@@ -78,93 +78,93 @@ struct SLRAnalysisTableBuilder
 		BuildTable();
 	}
 
-	// ¹¹½¨·ÖÎö±í
+	// æ„å»ºåˆ†æè¡¨
 	void BuildTable()
 	{
 		BuildActionTable();
 		BuildGotoTable();
 	}
 
-	// ¹¹½¨ACTION±í
+	// æ„å»ºACTIONè¡¨
 	void BuildActionTable()
 	{
-		// ±éÀúËùÓĞ×´Ì¬
+		// éå†æ‰€æœ‰çŠ¶æ€
 		for (const LRState &State : AutomatonBuilder.States)
 		{
-			// ±éÀú×´Ì¬ÖĞµÄËùÓĞÏîÄ¿
+			// éå†çŠ¶æ€ä¸­çš„æ‰€æœ‰é¡¹ç›®
 			for (const LRItem &Item : State.Items)
 			{
-				// Èç¹ûÊÇ½ÓÊÜÏîÄ¿
+				// å¦‚æœæ˜¯æ¥å—é¡¹ç›®
 				if (Item.IsAcceptItem(AutomatonBuilder.OriginalGrammar.StartSymbol))
 				{
-					// ÔÚACTION±íÖĞÎª¸Ã×´Ì¬ºÍ$·ûºÅÌí¼ÓACCEPT¶¯×÷
+					// åœ¨ACTIONè¡¨ä¸­ä¸ºè¯¥çŠ¶æ€å’Œ$ç¬¦å·æ·»åŠ ACCEPTåŠ¨ä½œ
 					ActionTable[{State.StateId, FFCalculator.EndSymbol}] = SLRAction(SLRActionType::ACCEPT);
 				}
-				// Èç¹ûÊÇÒÆ½øÏîÄ¿
+				// å¦‚æœæ˜¯ç§»è¿›é¡¹ç›®
 				else if (!Item.IsReduceItem())
 				{
 					const GrammarSymbol *SymbolAfterDot = Item.GetSymbolAfterDot();
 					if (SymbolAfterDot != nullptr)
 					{
-						// Èç¹ûÊÇÖÕ½á·û£¬Ìí¼ÓÒÆ½ø¶¯×÷
+						// å¦‚æœæ˜¯ç»ˆç»“ç¬¦ï¼Œæ·»åŠ ç§»è¿›åŠ¨ä½œ
 						if (SymbolAfterDot->IsTerminal)
 						{
-							// »ñÈ¡×ªÒÆµ½µÄ×´Ì¬
+							// è·å–è½¬ç§»åˆ°çš„çŠ¶æ€
 							int NextState = State.GetTransition(SymbolAfterDot->Name);
 							if (NextState != -1)
 							{
-								// Èç¹û¸ÃÎ»ÖÃÒÑÓĞ¶¯×÷£¬¼ì²éÊÇ·ñÓĞ³åÍ»
+								// å¦‚æœè¯¥ä½ç½®å·²æœ‰åŠ¨ä½œï¼Œæ£€æŸ¥æ˜¯å¦æœ‰å†²çª
 								auto It = ActionTable.find({State.StateId, *SymbolAfterDot});
 								SLRAction NewAction(SLRActionType::SHIFT, NextState);
 								if (It != ActionTable.end())
 								{
-									// Ö»ÓĞµ±ĞÂ¶¯×÷ÓëÒÑÓĞ¶¯×÷²»Í¬Ê±£¬²Å±¨¸æ³åÍ»
+									// åªæœ‰å½“æ–°åŠ¨ä½œä¸å·²æœ‰åŠ¨ä½œä¸åŒæ—¶ï¼Œæ‰æŠ¥å‘Šå†²çª
 									if (It->second.Type != NewAction.Type || It->second.StateOrProduction != NewAction.StateOrProduction)
 									{
-										cout << "¾¯¸æ£ºÔÚ×´Ì¬ " << State.StateId
-											 << " ºÍ·ûºÅ " << SymbolAfterDot->Name
-											 << " ´¦·¢ÏÖ³åÍ»£ºÏÖÓĞ¶¯×÷ "
+										cout << "è­¦å‘Šï¼šåœ¨çŠ¶æ€ " << State.StateId
+											 << " å’Œç¬¦å· " << SymbolAfterDot->Name
+											 << " å¤„å‘ç°å†²çªï¼šç°æœ‰åŠ¨ä½œ "
 											 << It->second.ToString()
-											 << "£¬ĞÂ¶¯×÷ " << NewAction.ToString() << endl;
+											 << "ï¼Œæ–°åŠ¨ä½œ " << NewAction.ToString() << endl;
 									}
 								}
-								// Ìí¼ÓÒÆ½ø¶¯×÷£¨ÓÅÏÈÓÚ¹æÔ¼£©
+								// æ·»åŠ ç§»è¿›åŠ¨ä½œï¼ˆä¼˜å…ˆäºè§„çº¦ï¼‰
 								ActionTable[{State.StateId, *SymbolAfterDot}] = NewAction;
 							}
 						}
 					}
 				}
-				// Èç¹ûÊÇ¹æÔ¼ÏîÄ¿
+				// å¦‚æœæ˜¯è§„çº¦é¡¹ç›®
 				else
 				{
-					// ±éÀúFOLLOW¼¯£¬ÎªÃ¿¸öÖÕ½á·ûÌí¼ÓREDUCE¶¯×÷
+					// éå†FOLLOWé›†ï¼Œä¸ºæ¯ä¸ªç»ˆç»“ç¬¦æ·»åŠ REDUCEåŠ¨ä½œ
 					const Production &Prod = Item.ProductionRef;
 					const set<GrammarSymbol> &FollowSet =
 						FFCalculator.GetFollowSet(Prod.Left);
 
 					for (const GrammarSymbol &Term : FollowSet)
 					{
-						// Èç¹û¸ÃÎ»ÖÃÒÑÓĞ¶¯×÷£¬¼ì²éÊÇ·ñÓĞ³åÍ»
+						// å¦‚æœè¯¥ä½ç½®å·²æœ‰åŠ¨ä½œï¼Œæ£€æŸ¥æ˜¯å¦æœ‰å†²çª
 						auto It = ActionTable.find({State.StateId, Term});
 						SLRAction NewAction(SLRActionType::REDUCE, Prod.Id);
 						if (It != ActionTable.end())
 						{
-							// Ö»ÓĞµ±ĞÂ¶¯×÷ÓëÒÑÓĞ¶¯×÷²»Í¬Ê±£¬²Å±¨¸æ³åÍ»
+							// åªæœ‰å½“æ–°åŠ¨ä½œä¸å·²æœ‰åŠ¨ä½œä¸åŒæ—¶ï¼Œæ‰æŠ¥å‘Šå†²çª
 							if (It->second.Type != NewAction.Type || It->second.StateOrProduction != NewAction.StateOrProduction)
 							{
-								cout << "¾¯¸æ£ºÔÚ×´Ì¬ " << State.StateId
-									 << " ºÍ·ûºÅ " << Term.Name
-									 << " ´¦·¢ÏÖ³åÍ»£ºÏÖÓĞ¶¯×÷ "
+								cout << "è­¦å‘Šï¼šåœ¨çŠ¶æ€ " << State.StateId
+									 << " å’Œç¬¦å· " << Term.Name
+									 << " å¤„å‘ç°å†²çªï¼šç°æœ‰åŠ¨ä½œ "
 									 << It->second.ToString()
-									 << "£¬ĞÂ¶¯×÷ " << NewAction.ToString() << endl;
-								// ÒÆ½ø¶¯×÷ÓÅÏÈÓÚ¹æÔ¼¶¯×÷£¬ËùÒÔ²»¸²¸ÇÒÑÓĞÒÆ½ø¶¯×÷
+									 << "ï¼Œæ–°åŠ¨ä½œ " << NewAction.ToString() << endl;
+								// ç§»è¿›åŠ¨ä½œä¼˜å…ˆäºè§„çº¦åŠ¨ä½œï¼Œæ‰€ä»¥ä¸è¦†ç›–å·²æœ‰ç§»è¿›åŠ¨ä½œ
 								if (It->second.Type == SLRActionType::SHIFT)
 								{
 									continue;
 								}
 							}
 						}
-						// Ìí¼Ó¹æÔ¼¶¯×÷
+						// æ·»åŠ è§„çº¦åŠ¨ä½œ
 						ActionTable[{State.StateId, Term}] = NewAction;
 					}
 				}
@@ -172,24 +172,24 @@ struct SLRAnalysisTableBuilder
 		}
 	}
 
-	// ¹¹½¨GOTO±í
+	// æ„å»ºGOTOè¡¨
 	void BuildGotoTable()
 	{
-		// ±éÀúËùÓĞ×´Ì¬
+		// éå†æ‰€æœ‰çŠ¶æ€
 		for (const LRState &State : AutomatonBuilder.States)
 		{
-			// ±éÀú×´Ì¬ÖĞµÄËùÓĞ×ªÒÆ
+			// éå†çŠ¶æ€ä¸­çš„æ‰€æœ‰è½¬ç§»
 			for (const auto &Transition : State.Transitions)
 			{
 				const string &SymbolName = Transition.first;
 				int NextStateId = Transition.second;
 
-				// ²éÕÒ¶ÔÓ¦µÄ·ûºÅ
+				// æŸ¥æ‰¾å¯¹åº”çš„ç¬¦å·
 				for (const GrammarSymbol &NonTerminal : Grammar.NonTerminals)
 				{
 					if (NonTerminal.Name == SymbolName)
 					{
-						// Ìí¼Óµ½GOTO±í
+						// æ·»åŠ åˆ°GOTOè¡¨
 						GotoTable[{State.StateId, NonTerminal}] = NextStateId;
 						break;
 					}
@@ -198,7 +198,7 @@ struct SLRAnalysisTableBuilder
 		}
 	}
 
-	// »ñÈ¡ACTION
+	// è·å–ACTION
 	const SLRAction &GetAction(int StateId, const GrammarSymbol &Symbol) const
 	{
 		static SLRAction ErrorAction;
@@ -210,7 +210,7 @@ struct SLRAnalysisTableBuilder
 		return ErrorAction;
 	}
 
-	// »ñÈ¡GOTO
+	// è·å–GOTO
 	int GetGoto(int StateId, const GrammarSymbol &Symbol) const
 	{
 		auto It = GotoTable.find({StateId, Symbol});
@@ -218,17 +218,17 @@ struct SLRAnalysisTableBuilder
 		{
 			return It->second;
 		}
-		return -1; // ´íÎó
+		return -1; // é”™è¯¯
 	}
 
-	// ´òÓ¡·ÖÎö±í
+	// æ‰“å°åˆ†æè¡¨
 	void PrintTable() const
 	{
 		cout << endl
-			 << "SLR(1)·ÖÎö±í:" << endl;
+			 << "SLR(1)åˆ†æè¡¨:" << endl;
 		cout << "-------------------------------------------" << endl;
 
-		// »ñÈ¡ËùÓĞÖÕ½á·û£¨°üÀ¨$£©ºÍ·ÇÖÕ½á·û
+		// è·å–æ‰€æœ‰ç»ˆç»“ç¬¦ï¼ˆåŒ…æ‹¬$ï¼‰å’Œéç»ˆç»“ç¬¦
 		set<GrammarSymbol> Terminals;
 		for (const auto &Term : Grammar.Terminals)
 		{
@@ -236,18 +236,18 @@ struct SLRAnalysisTableBuilder
 		}
 		Terminals.insert(FFCalculator.EndSymbol);
 
-		// ´´½¨ÁÙÊ±ÈİÆ÷À´´æ£¬ÒÔÃâ¸ÉÈÅÔ­Êı¾İ
+		// åˆ›å»ºä¸´æ—¶å®¹å™¨æ¥å­˜ï¼Œä»¥å…å¹²æ‰°åŸæ•°æ®
 		set<GrammarSymbol> NonTerminals;
 		for (const auto &NonTerm : Grammar.NonTerminals)
 		{
 			NonTerminals.insert(NonTerm);
 		}
 
-		// ÒÆ³ıÔö¹ãÎÄ·¨µÄ¿ªÊ¼·ûºÅ
+		// ç§»é™¤å¢å¹¿æ–‡æ³•çš„å¼€å§‹ç¬¦å·
 		NonTerminals.erase(AutomatonBuilder.AugmentedGrammar.StartSymbol);
 
-		// ´òÓ¡±íÍ·
-		cout << "×´Ì¬\t|";
+		// æ‰“å°è¡¨å¤´
+		cout << "çŠ¶æ€\t|";
 		for (const GrammarSymbol &Term : Terminals)
 		{
 			cout << "\t" << Term.Name;
@@ -265,19 +265,19 @@ struct SLRAnalysisTableBuilder
 		}
 		cout << endl;
 
-		// ´òÓ¡Ã¿¸ö×´Ì¬µÄĞĞ
+		// æ‰“å°æ¯ä¸ªçŠ¶æ€çš„è¡Œ
 		for (const LRState &State : AutomatonBuilder.States)
 		{
 			cout << State.StateId << "\t|";
 
-			// ´òÓ¡ACTION±í²¿·Ö
+			// æ‰“å°ACTIONè¡¨éƒ¨åˆ†
 			for (const GrammarSymbol &Term : Terminals)
 			{
 				const SLRAction &Action = GetAction(State.StateId, Term);
 				cout << "\t" << Action.ToString();
 			}
 
-			// ´òÓ¡GOTO±í²¿·Ö
+			// æ‰“å°GOTOè¡¨éƒ¨åˆ†
 			for (const GrammarSymbol &NonTerm : NonTerminals)
 			{
 				int GotoState = GetGoto(State.StateId, NonTerm);
