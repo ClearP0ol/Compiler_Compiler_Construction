@@ -11,6 +11,12 @@
 #include <unordered_map>
 #include <vector>
 
+/*
+SEM_IR 宏：用于条件编译语义分析 + 中间代码(IR)生成相关逻辑。
+- 关闭 SEM_IR：该文件只做纯 SLR 语法分析（状态栈+符号栈），不做语义检查/IR 输出。
+- 开启 SEM_IR：在 SLR 解析流程的 SHIFT/REDUCE 动作中同步维护“语义值栈(ValueStack)”
+	并维护符号表(Scopes)、IR 四元式(IR) 等辅助结构。
+*/
 #define SEM_IR
 
 #ifdef SEM_IR
@@ -24,9 +30,15 @@ using namespace std;
 // 移进-归约分析器
 struct ShiftReduceParser
 {
-#ifdef SEM_IR
-	enum class BaseType { INT, VOID, BOOL, ERR };
 
+#ifdef SEM_IR
+	// ====== 最小化语义类型系统 ======
+
+	// BaseType：语义分析阶段使用的“静态类型”枚举，用于类型检查与符号表记录。
+	// - INT/VOID/BOOL：示例语言最常见的几种类型
+	// - ERR：语义推断失败/错误传播时的占位类型
+	enum class BaseType { INT, VOID, BOOL, ERR };
+	// 将 BaseType 转成可读字符串，便于报错与调试输出。
 	static inline const char* TypeName(BaseType t) {
 		switch (t) {
 			case BaseType::INT:return "int";
@@ -37,20 +49,46 @@ struct ShiftReduceParser
 	}
 
 	// ====== 三地址/四元式 IR ======
+	/*
+	Quad：中间代码的一个“四元式”单元，常用于三地址码表示。
+	- op：操作符（例如 "+", "*", "=", "goto", "if<", "ret" 等）
+	- a1/a2：操作数（可能是变量唯一名、临时变量、常量字面量等）
+	- res：结果位置（目的变量/临时变量名；对 if/goto 可不使用）
+	- target：跳转目标地址（用于 goto / ifxxx），-1 表示“占位”，需要后续 backpatch 填充
+	*/
 	struct Quad {
 		string op, a1, a2, res;
 		int target = -1; // goto/if 的目标，-1 表示占位
 	};
+	// IR：顺序保存整个程序产生的四元式列表；NextQuad() 即“下一条指令地址”。
 	vector<Quad> IR;
 
+	// nextquad：返回当前 IR 长度，即下一条将要 emit 的指令下标。
 	int NextQuad()const { return (int)IR.size(); }
+	/*
+	Emit：追加一条四元式到 IR，并返回其下标。
+	- 语义动作（reduce）中会频繁调用：表达式生成、赋值、跳转占位等。
+	- target 默认为 -1，表示该四元式可能需要回填跳转目标。
+	*/
 	int Emit(const string& op, const string& a1 = "", const string& a2 = "", const string& res = "", int target = -1) {
 		IR.push_back({ op,a1,a2,res,target });
 		return (int)IR.size() - 1;
 	}
+	/*
+	Merge：回填(list)合并工具。
+	在经典 backpatching 中 truelist/falselist/nextlist 都是“未决跳转”的指令下标集合，
+	需要在归约时合并列表。
+	*/
 	static inline vector<int> Merge(const vector<int>& a, const vector<int>& b) {
 		vector<int> r = a; r.insert(r.end(), b.begin(), b.end()); return r;
 	}
+	/*
+	Backpatch：回填函数，将 lst 中记录的四元式跳转目标统一填成 target。
+	使用场景：
+	- if 条件为真 -> 跳到 then 的入口
+	- if 条件为假 -> 跳到 else 的入口或 if 后的位置
+	- while 条件为真 -> 跳到循环体；为假 -> 跳出循环
+	*/
 	void Backpatch(const vector<int>& lst, int target) {
 		for (int i : lst) {
 			if (i < 0 || i >= (int)IR.size())continue;
@@ -59,35 +97,97 @@ struct ShiftReduceParser
 	}
 
 	// ====== 语义值（按需最小集）======
+	/*
+	语义值(semantic value)：与 SymbolStack 中每个语法符号“一一对齐”的属性记录。
+	在 SLR/LR 中，语义动作通常在 REDUCE 时执行：
+	- 从 ValueStack 弹出 RHS 的语义值数组 rhs[]
+	- 计算 LHS 的语义值 lhsVal
+	- 将 lhsVal 再压回 ValueStack，保持与符号栈同步
+	*/
+
+	// TypeVal：用于非终结符 Type 的综合属性（例如 "int" / "void"）
 	struct TypeVal { BaseType t = BaseType::ERR; };
-	struct IdVal { string name, pos; };         // 原始标识符文本 + 位置信息
+	// IdVal：用于终结符 id 的语义值
+	// - name：保留原始 lexeme（例如 "x"），不能用 LookupSymbol.Name（那会被改成 "id"）
+	// - pos：位置信息（用于报错定位）
+	struct IdVal { string name, pos; };
+	// NumVal：用于终结符 num 的语义值（保存整型常量值）
 	struct NumVal { int v = 0; };
-
-	struct ExprVal { BaseType t = BaseType::ERR; string place; int begin = -1; }; // place=变量/临时/常量文本
+	/*
+	ExprVal：表达式综合属性
+	- t：表达式静态类型（用于算术/赋值/return 等类型检查）
+	- place：表达式结果“放在哪里”
+	  可能是：
+		1) 变量的唯一名（Symbol.irName）
+		2) 临时变量名（t1,t2,...）
+		3) 常量字面量字符串（例如 "123"）
+	- begin：该表达式对应 IR 的“起始指令地址”，用于控制流拼接时知道入口位置
+	*/
+	struct ExprVal { BaseType t = BaseType::ERR; string place; int begin = -1; };
+	/*
+	BoolVal：布尔表达式（这里用“控制流表示法”而非直接计算 true/false）
+	- truelist：条件为真时跳转指令的占位集合
+	- falselist：条件为假时跳转指令的占位集合
+	- begin：该条件判断 IR 的入口位置
+	*/
 	struct BoolVal { vector<int> truelist, falselist; int begin = -1; };
+	/*
+	StmtVal：语句综合属性
+	- nextlist：语句执行完后需要跳转但尚未确定目标的 goto 占位集合
+	  （顺序语句拼接/控制流结构收尾时常用）
+	- begin：该语句对应 IR 的入口位置
+	*/
 	struct StmtVal { vector<int> nextlist; int begin = -1; };
-
-	struct OpVal { string op; };               // RelOp
-
+	// OpVal：关系运算符 RelOp 的语义值（保存 "<", ">=", "==" 等字符串）
+	struct OpVal { string op; };
+	/*
+	SemVal：统一的“语义值载体”，使用 std::variant 让不同符号承载不同字段。
+	- monostate：占位类型，表示该符号暂时不携带语义属性（例如 ";"、"("、")" 等）
+	*/
 	using SemVal = variant<monostate, TypeVal, IdVal, NumVal, ExprVal, BoolVal, StmtVal, OpVal>;
+	/*
+	ValueStack：语义值栈，与 SymbolStack 同步（对齐规则非常重要！）
+	- SHIFT：压入终结符对应的语义值（id/num/type/op…），以及符号栈压入的 LookupSymbol
+	- REDUCE：弹出 RHS 个语义值，计算 LHS 语义值再压回
+	*/
 	stack<SemVal> ValueStack;
 
-	// 方便取 variant
+	// 方便取 variant：As<T>(v) 获取，Is<T>(v) 判断类型
 	template<class T>static inline const T& As(const SemVal& v) { return get<T>(v); }
 	template<class T>static inline bool Is(const SemVal& v) { return holds_alternative<T>(v); }
 
 	// ====== 符号表（作用域栈）======
-	enum class SymKind { VAR, FUNC, PARAM };
 
+	/*
+	SymKind：符号种类
+	- VAR：变量
+	- FUNC：函数（这里仅记录返回类型/名字；参数类型可扩展）
+	- PARAM：参数（属于函数体的局部符号）
+	*/
+	enum class SymKind { VAR, FUNC, PARAM };
+	/*
+	Symbol：符号表条目
+	- kind：符号种类
+	- type：变量/参数类型；函数返回类型
+	- params：函数参数类型（本最小实现里仅做占位，参数先存在 PendingParams）
+	- irName：变量唯一名（解决遮蔽/同名问题；IR 中使用 irName 不会混淆）
+	- scopeLevel：所在作用域层级（调试/报错用）
+	*/
 	struct Symbol {
 		SymKind kind = SymKind::VAR;
-		BaseType type = BaseType::ERR;           // var/param 的类型；func 的返回类型
-		vector<BaseType> params;               // func 参数类型
-		string irName;                         // 变量唯一名（避免同名遮蔽混淆）
+		BaseType type = BaseType::ERR;
+		vector<BaseType> params;
+		string irName;
 		int scopeLevel = 0;
 	};
-
+	/*
+	Scopes：作用域栈（每层一个 hash 表：name -> Symbol）
+	- BeginScope：遇到 '{' 进入新块作用域
+	- EndScope：遇到 '}' 退出作用域
+	说明：这里只保留一个全局 scope（Scopes.size()>1 才 pop），避免空栈。
+	*/
 	vector<unordered_map<string, Symbol>> Scopes;
+	// uniqId：用于生成临时变量名/变量唯一名，保证不冲突
 	int uniqId = 0;
 
 	void BeginScope() { Scopes.push_back({}); }
@@ -95,6 +195,10 @@ struct ShiftReduceParser
 		if (Scopes.size() > 1)Scopes.pop_back(); // 留一个全局 scope
 	}
 
+	/*
+	Lookup：从内到外查找标识符，返回最近作用域中的符号条目。
+	用途：检测“使用未定义标识符”、获取类型、获取 irName 用于生成 IR。
+	*/
 	Symbol* Lookup(const string& name) {
 		for (int i = (int)Scopes.size() - 1; i >= 0; --i) {
 			auto it = Scopes[i].find(name);
@@ -103,6 +207,10 @@ struct ShiftReduceParser
 		return nullptr;
 	}
 
+	/*
+	InsertHere：仅在当前作用域插入符号。
+	用途：检测“同一作用域重定义”；允许外层同名在内层遮蔽（shadowing）。
+	*/
 	bool InsertHere(const string& name, const Symbol& sym, string& err) {
 		auto& cur = Scopes.back();
 		if (cur.find(name) != cur.end()) {
@@ -113,18 +221,30 @@ struct ShiftReduceParser
 		return true;
 	}
 
+	// NewTemp：生成一个新的临时变量名，用于表达式计算结果保存
 	string NewTemp() { return "t" + to_string(++uniqId); }
+	// NewVarName：为变量/参数生成一个唯一名（包含 scopeLevel 和序号）
+	// 这样 IR 中使用 irName，可以避免块作用域同名变量冲突。
 	string NewVarName(const string& raw) { return raw + "@" + to_string((int)Scopes.size() - 1) + "#" + to_string(++uniqId); }
 
 	// ====== 函数上下文（最小化）======
-	bool PendingFunc = false;
-	bool InFunction = false;
-	string CurFuncName;
-	BaseType CurFuncRet = BaseType::ERR;
-	int FuncScopeDepth = 0;
-	vector<pair<string, BaseType>> PendingParams;
+	/*
+	由于语法动作在 SHIFT/REDUCE 的某些时刻触发，而函数定义涉及“先看到返回类型+函数名+参数列表，
+	再遇到 '{' 才进入函数体作用域”，因此需要一组“跨步骤的临时状态”保存上下文。
+	*/
 
-	stack<int> PendingIfElseEndJumps; // 处理 if-else：在 shift else 时 emit 的 “goto end” 占位
+	bool PendingFunc = false; // 已识别到函数头（Type id '('），但还没遇到 '{' 建函数体作用域
+	bool InFunction = false; // 当前是否在函数体内部（用于 return 合法性检查）
+	string CurFuncName; // 当前函数名（可用于报错/生成标签）
+	BaseType CurFuncRet = BaseType::ERR; // 当前函数返回类型
+	int FuncScopeDepth = 0; // 用于判断函数体结束：作用域弹出到小于该值时即函数结束
+	vector<pair<string, BaseType>> PendingParams; // 参数在参数列表归约时收集，等进入 '{' 后再插入到作用域
+	/*
+	PendingIfElseEndJumps：处理 if-else 的一个“最小化 hack”：
+	- 在 SHIFT 到 else 之前，先 emit 一个 "goto _" 用来跳过 else（then 分支结束跳到 if-else 末尾）
+	- 这个 goto 的下标需要跨越若干次 shift/reduce 保存，直到 else 语句归约完成后才能 backpatch 到 end
+	*/
+	stack<int> PendingIfElseEndJumps;
 
 	// 打印 IR
 	void DumpIR() const {
@@ -148,6 +268,7 @@ struct ShiftReduceParser
 		}
 	}
 
+	// 打印符号表：用于检查作用域/重定义/唯一名生成是否符合预期
 	void DumpSymbols() const {
 		cout << "\n==== Symbol Tables ====\n";
 		for (int i = 0; i < (int)Scopes.size(); ++i) {
@@ -227,7 +348,12 @@ struct ShiftReduceParser
 		SymbolStack.push(GrammarSymbol("$", true)); // 栈底符号为$
 
 #ifdef SEM_IR
+		// 语义值栈必须与符号栈保持严格对齐：
+		// - 符号栈底已经压了 "$"
+		// - 因此语义值栈也压一个 monostate 占位，与 "$" 对齐
 		ValueStack.push(monostate{});
+
+		// 初始化全局作用域（Scopes[0]），后续遇到 '{' 再 BeginScope() 进入块作用域
 		Scopes.clear();
 		Scopes.push_back({});
 #endif
@@ -267,10 +393,20 @@ struct ShiftReduceParser
 				cout << "执行移进操作: S" << Action.StateOrProduction << "\n";
 				
 #ifdef SEM_IR
-				// ====== 0) 处理 shift 前置动作：else 需要在“进入 else 语句前”插入 goto end，并回填条件 false 跳转 ======
+				/*
+				(0) shift 前置动作：专门处理 "else"
+				原因：
+				- if-else 的控制流回填需要一个 “then 结束后跳过 else” 的 goto 占位；
+				- 同时还要把条件的 falselist 回填到 else 的入口；
+				- 但在纯 LR reduce 触发点，有时很难准确拿到“else 的入口地址”，因此这里采用最小化做法：
+				  在真正 SHIFT else 之前（else 尚未入栈、else 的 IR 尚未产生），先：
+				  1) emit goto _：保存到 PendingIfElseEndJumps（then 分支结束跳到 end）
+				  2) backpatch 条件真到 then.begin
+				  3) backpatch 条件假到 else.begin（此刻 NextQuad() 即 else 第一句的地址）
+				*/
 				if (CurrentInput.Name == "else") {
-					// 栈里此时应形如：... if ( RelExpr ) Stmt   （else 还没入栈）
-					// 取最近的 RelExpr 和 then Stmt：直接复制栈到数组做模式匹配（最小化实现）
+					// 复制符号栈/语义栈到数组，用模式匹配定位最近的 if (RelExpr) Stmt
+					// 这是“最小化 hack”，不依赖产生式 id，但对栈形态有假设
 					auto CopySyms = SymbolStack; vector<GrammarSymbol> syms;
 					auto CopyVals = ValueStack; vector<SemVal> vals;
 					while (!CopySyms.empty()) { syms.push_back(CopySyms.top()); CopySyms.pop(); }
@@ -286,26 +422,37 @@ struct ShiftReduceParser
 						}
 					}
 					if (idx != -1 && Is<BoolVal>(vals[idx + 2]) && Is<StmtVal>(vals[idx + 4])) {
-						const auto& B = As<BoolVal>(vals[idx + 2]);
-						const auto& S1 = As<StmtVal>(vals[idx + 4]);
+						const auto& B = As<BoolVal>(vals[idx + 2]); // if 条件产生的 truelist/falselist
+						const auto& S1 = As<StmtVal>(vals[idx + 4]); // then 语句入口 begin
 
-						// 1) then 结束后跳过 else：emit goto _
+						// then 执行完后要跳过 else：goto end（占位）
 						int j = Emit("goto", "", "", "", -1);
 						PendingIfElseEndJumps.push(j);
 
-						// 2) 条件真跳到 then 开始
+						// 条件真跳到 then 的入口
 						Backpatch(B.truelist, S1.begin == -1 ? NextQuad() : S1.begin);
 
-						// 3) 条件假跳到 else 开始（注意：else 开始应在 goto 之后）
-						Backpatch(B.falselist, NextQuad()); // NextQuad() 此刻正好是 else 第一条 IR 的位置
+						// 条件假跳到 else 的入口：
+						// 关键点：我们把 else 的入口定义为“goto end 之后的下一条”，即 NextQuad()
+						Backpatch(B.falselist, NextQuad());
 					}
 				}
 
-				// ====== 1) 函数头检测：看到 '(' 且栈顶是 id，下面是 Type => 函数定义开始（语法里只有函数定义会这样）:contentReference[oaicite:2]{index=2}
+				/*
+				(1) 函数头检测：在 SHIFT '(' 时尝试识别 “Type id ( ... ) { ... }” 的函数定义开始。
+				为什么在 SHIFT '(' 做？
+				- 当读到 '('，说明刚刚读过的 token 序列形如：Type id '('
+				- 对你的语法来说：全局层面的 Type id '(' 最典型就是函数定义
+				动作：
+				- 将函数名插入全局符号表（kind=FUNC，type=返回类型）
+				- 设置 PendingFunc/InFunction 等上下文，参数列表在后续归约 Parameter 时收集
+				注意：
+				- 这里用 Scopes.size()==1 限制为“全局层”识别函数，以免误判局部变量后的 '('（若语法扩展函数指针/调用等会更复杂）
+				*/
 				if (CurrentInput.Name == "(") {
 					auto tmpSym = SymbolStack; auto tmpVal = ValueStack;
-					GrammarSymbol s1 = tmpSym.top(); tmpSym.pop();
-					GrammarSymbol s2 = tmpSym.top();
+					GrammarSymbol s1 = tmpSym.top(); tmpSym.pop(); // 栈顶符号（刚移进的前一个符号）
+					GrammarSymbol s2 = tmpSym.top(); // s1 下方符号
 
 					SemVal v1 = tmpVal.top(); tmpVal.pop();
 					SemVal v2 = tmpVal.top();
@@ -316,14 +463,16 @@ struct ShiftReduceParser
 
 						string err;
 						Symbol fs; fs.kind = SymKind::FUNC; fs.type = tv.t; fs.irName = idv.name; fs.scopeLevel = 0;
+
+						// 同一作用域重定义检查：同名函数重复定义直接报错
 						if (!InsertHere(idv.name, fs, err)) {
 							cout << "语义错误: " << err << " @ " << idv.pos << "\n";
 							return false;
 						}
+						// 进入“函数定义上下文”，参数后面归约 Parameter 时累计到 PendingParams
 						PendingFunc = true; InFunction = true;
 						CurFuncName = idv.name; CurFuncRet = tv.t;
 						PendingParams.clear();
-						// 你也可以 Emit 一个 func label：Emit("func",CurFuncName,"","")
 					}
 				}
 #endif
@@ -333,7 +482,13 @@ struct ShiftReduceParser
 				StateStack.push(Action.StateOrProduction);
 
 #ifdef SEM_IR
-				// ====== 3) 语义值入栈（注意：用 CurrentInput 保留 lexeme）======
+				/*
+				(3) 语义值入栈：与 SymbolStack 的 SHIFT 必须保持同步对齐。
+				关键点：
+				- 语法分析用于查 ACTION 的 LookupSymbol：ID/NUM 被统一成 "id"/"num"
+				- 但语义分析需要保留原始 lexeme（例如变量名 "x"、常量 "123"）
+				因此：语义值入栈使用 CurrentInput（原始 token），而不是 LookupSymbol。
+				*/
 				SemVal pushed = monostate{};
 				if (CurrentInput.TokenType == "ID") {
 					pushed = IdVal{ CurrentInput.Name,CurrentInput.Position };
@@ -350,29 +505,42 @@ struct ShiftReduceParser
 					pushed = TypeVal{ BaseType::VOID };
 				}
 				else if (CurrentInput.Name == "<" || CurrentInput.Name == ">" || CurrentInput.Name == "<=" || CurrentInput.Name == ">=" || CurrentInput.Name == "==" || CurrentInput.Name == "!=") {
+					// 关系运算符作为 OpVal 保存，后续在归约 RelExpr 时用来生成 if< / if== 等跳转
 					pushed = OpVal{ CurrentInput.Name };
 				}
 				ValueStack.push(pushed);
 
-				// ====== 4) 作用域管理：{ 开新作用域；} 关作用域（最小化）:contentReference[oaicite:3]{index=3}
+				/*
+				(4) 作用域管理：在 SHIFT '{' / SHIFT '}' 时维护符号表作用域栈。
+				- '{'：BeginScope()，新建一个局部作用域（块作用域）
+				- '}'：EndScope()，退出当前作用域
+				并且：
+				- 如果 PendingFunc=true，说明刚识别完函数头，但参数还没真正进入符号表
+				  这里选择在进入函数体 '{' 时，把 PendingParams 插入到新建的作用域中（参数属于函数体最外层作用域）
+				- FuncScopeDepth 用于判断函数体结束：当 EndScope 后 Scopes.size() < FuncScopeDepth 即认为函数结束
+				*/
 				if (CurrentInput.Name == "{") {
 					BeginScope();
+					// 若刚进入函数体：把参数插入到函数体作用域中
 					if (PendingFunc) {
 						FuncScopeDepth = (int)Scopes.size();
-						// 把参数真正插入到函数体作用域
+						// 参数名重名检查（同一个参数列表中不允许重复）
 						set<string> seen;
 						for (auto& [pname, pt] : PendingParams) {
 							if (seen.count(pname)) { cout << "语义错误: 参数重名 " << pname << "\n"; return false; }
 							seen.insert(pname);
+							// 参数作为 PARAM 符号插入当前作用域，生成唯一名用于 IR
 							Symbol ps; ps.kind = SymKind::PARAM; ps.type = pt; ps.irName = NewVarName(pname); ps.scopeLevel = (int)Scopes.size() - 1;
 							string err;
 							if (!InsertHere(pname, ps, err)) { cout << "语义错误: " << err << "\n"; return false; }
 						}
+						// 参数已落表，函数头处理完毕
 						PendingFunc = false;
 					}
 				}
 				else if (CurrentInput.Name == "}") {
 					EndScope();
+					// 若作用域弹出到了函数体之外，说明函数结束，清空函数上下文
 					if (InFunction && (int)Scopes.size() < FuncScopeDepth) {
 						// 函数体结束
 						InFunction = false; CurFuncName.clear(); CurFuncRet = BaseType::ERR; FuncScopeDepth = 0;
@@ -405,8 +573,18 @@ struct ShiftReduceParser
 				}
 
 #ifdef SEM_IR
+				/*
+				REDUCE 阶段的语义分析核心流程（LR/SLR 的标准写法）：
+				- 设产生式 A -> β，|β|=n
+				1) 从 ValueStack 弹出 n 个语义值，按从左到右存入 rhs[0..n-1]
+				   （注意弹栈顺序是反的，所以这里用倒序写入）
+				2) 与此同时，语法栈会弹出 n 个符号与 n 个状态（你在 SEM_IR 外已经做了）
+				3) 执行“语义动作”：根据 rhs 计算 lhsVal（即 A 的综合属性）
+				4) 归约完成后，把 lhsVal 再压回 ValueStack，与 SymbolStack 推入 A 保持对齐
+				*/
 				size_t n = Prod.Right.size();
 				// 1) 收集 RHS 的语义值（从栈顶弹出 n 个）
+				// rhs[i] 对应产生式右部第 i 个符号的语义值
 				vector<SemVal> rhs(n);
 				for (int i = (int)n - 1; i >= 0; --i) { rhs[i] = ValueStack.top(); ValueStack.pop(); }
 #endif
@@ -419,11 +597,20 @@ struct ShiftReduceParser
 				}
 
 #ifdef SEM_IR
+				/*
+				lhsVal：当前归约产生式左部非终结符的语义值。
+				下面这一长串 if/else 是“按非终结符名字 + 产生式形态”进行的语义动作分派：
+				- 表达式/项/因子：做类型检查并 Emit 计算 IR，生成 ExprVal(place=临时变量/变量唯一名)
+				- 关系表达式：Emit ifxxx/goto 占位，生成 BoolVal(truelist/falselist)
+				- 声明/赋值：更新符号表 + Emit '='
+				- if/while：Backpatch 回填控制流跳转
+				- return：检查是否在函数内 + 返回类型匹配 + Emit ret/retv
+				*/
 				SemVal lhsVal = monostate{};
 
-				auto L = Prod.Left.Name;
+				auto& L = Prod.Left.Name;
 
-				// ---- Type -> int/void 直接透传（你 shift 已压了 TypeVal） :contentReference[oaicite:4]{index=4}
+				// ---- Type -> int/void 直接透传（shift 已压了 TypeVal） :contentReference[oaicite:4]{index=4}
 				if (L == "Type") {
 					if (Is<TypeVal>(rhs[0])) lhsVal = rhs[0];
 					else if (Prod.Right[0].Name == "int") lhsVal = TypeVal{ BaseType::INT };

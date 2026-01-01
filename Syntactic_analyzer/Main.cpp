@@ -100,7 +100,9 @@ int main(int argc, char* argv[])
 			if (Success)
 			{
 				cout << "\n移进-归约分析成功！" << endl;
+#ifdef SEM_IR
 				Parser.DumpIR();
+#endif
 			}
 			else
 			{
