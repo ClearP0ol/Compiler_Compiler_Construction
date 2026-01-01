@@ -8,9 +8,9 @@ using namespace std;
 struct LRItem
 {
 	Production ProductionRef;
-	size_t DotPosition; // 0è¡¨ç¤ºåœ†ç‚¹åœ¨ç¬¬ä¸€ä¸ªç¬¦å·å‰
+	size_t DotPosition; // 0±íÊ¾Ô²µãÔÚµÚÒ»¸ö·ûºÅÇ°
 
-	// æ„é€ å‡½æ•°
+	// ¹¹Ôìº¯Êı
 	LRItem() : DotPosition(0) {}
 
 	LRItem(const Production &prod, size_t dotPos = 0)
@@ -18,36 +18,36 @@ struct LRItem
 	{
 	}
 
-	// è·å–åœ†ç‚¹åçš„ç¬¦å·
+	// »ñÈ¡Ô²µãºóµÄ·ûºÅ
 	const GrammarSymbol *GetSymbolAfterDot() const
 	{
 		if (DotPosition < ProductionRef.Right.size())
 		{
-			return &ProductionRef.Right[DotPosition]; // è¿”å›æŒ‡é’ˆ
+			return &ProductionRef.Right[DotPosition]; // ·µ»ØÖ¸Õë
 		}
-		return nullptr; // æ²¡æœ‰ç¬¦å·åè¿”å›ç©ºæŒ‡é’ˆ
+		return nullptr; // Ã»ÓĞ·ûºÅºó·µ»Ø¿ÕÖ¸Õë
 	}
 
-	// è·å–ä¸‹ä¸€ä¸ªé¡¹ç›®ï¼ˆåœ†ç‚¹å‘å‰ç§»åŠ¨ä¸€ä½ï¼‰
+	// »ñÈ¡ÏÂÒ»¸öÏîÄ¿£¨Ô²µãÏòÇ°ÒÆ¶¯Ò»Î»£©
 	LRItem GetNextItem() const
 	{
 		if (DotPosition < ProductionRef.Right.size())
 		{
 			return LRItem(ProductionRef, DotPosition + 1);
 		}
-		return *this; // å·²ç»æ˜¯è§„çº¦é¡¹ç›®
+		return *this; // ÒÑ¾­ÊÇ¹æÔ¼ÏîÄ¿
 	}
 
-	// æ£€æŸ¥æ˜¯å¦ä¸ºè§„çº¦é¡¹ç›®
+	// ¼ì²éÊÇ·ñÎª¹æÔ¼ÏîÄ¿
 	bool IsReduceItem() const
 	{
 		return DotPosition >= ProductionRef.Right.size();
 	}
 
-	// æ£€æŸ¥æ˜¯å¦ä¸ºæ¥å—é¡¹ç›®ï¼ˆé’ˆå¯¹å¢å¹¿æ–‡æ³•ï¼‰
+	// ¼ì²éÊÇ·ñÎª½ÓÊÜÏîÄ¿£¨Õë¶ÔÔö¹ãÎÄ·¨£©
 	bool IsAcceptItem(const GrammarSymbol &StartSymbol) const
 	{
-		// æ£€æŸ¥æ˜¯å¦ä¸º S' -> Sâ€¢ è¿™æ ·çš„é¡¹ç›®
+		// ¼ì²éÊÇ·ñÎª S' -> S? ÕâÑùµÄÏîÄ¿
 		if (ProductionRef.Left.Name == StartSymbol.Name + "'" &&
 			ProductionRef.Right.size() == 1 &&
 			ProductionRef.Right[0].Name == StartSymbol.Name &&
@@ -58,28 +58,28 @@ struct LRItem
 		return false;
 	}
 
-	// ç”¨äºsetæ’åº
+	// ÓÃÓÚsetÅÅĞò
 	bool operator<(const LRItem &Other) const
 	{
-		// å…ˆæ¯”è¾ƒå·¦éƒ¨
+		// ÏÈ±È½Ï×ó²¿
 		if (ProductionRef.Left.Name != Other.ProductionRef.Left.Name)
 		{
 			return ProductionRef.Left.Name < Other.ProductionRef.Left.Name;
 		}
 
-		// æ¯”è¾ƒå³éƒ¨é•¿åº¦
+		// ±È½ÏÓÒ²¿³¤¶È
 		if (ProductionRef.Right.size() != Other.ProductionRef.Right.size())
 		{
 			return ProductionRef.Right.size() < Other.ProductionRef.Right.size();
 		}
 
-		// æ¯”è¾ƒåœ†ç‚¹ä½ç½®
+		// ±È½ÏÔ²µãÎ»ÖÃ
 		if (DotPosition != Other.DotPosition)
 		{
 			return DotPosition < Other.DotPosition;
 		}
 
-		// æ¯”è¾ƒå³éƒ¨ç¬¦å·
+		// ±È½ÏÓÒ²¿·ûºÅ
 		for (size_t i = 0; i < ProductionRef.Right.size(); ++i)
 		{
 			if (ProductionRef.Right[i].Name != Other.ProductionRef.Right[i].Name)
@@ -90,7 +90,7 @@ struct LRItem
 		return false;
 	}
 
-	// ç›¸ç­‰æ¯”è¾ƒ
+	// ÏàµÈ±È½Ï
 	bool operator==(const LRItem &Other) const
 	{
 		if (ProductionRef.Left.Name != Other.ProductionRef.Left.Name)
@@ -110,30 +110,30 @@ struct LRItem
 		return true;
 	}
 
-	// ä¸ç›¸ç­‰æ¯”è¾ƒ
+	// ²»ÏàµÈ±È½Ï
 	bool operator!=(const LRItem &Other) const
 	{
 		return !(*this == Other);
 	}
 
-	// è½¬æ¢ä¸ºå­—ç¬¦ä¸²
+	// ×ª»»Îª×Ö·û´®
 	string ToString() const
 	{
 		string Result = ProductionRef.Left.Name + " -> ";
 		for (size_t i = 0; i < ProductionRef.Right.size(); ++i)
 		{
 			if (i == DotPosition)
-				Result += "â€¢ ";
+				Result += "? ";
 			Result += ProductionRef.Right[i].Name + " ";
 		}
 		if (DotPosition == ProductionRef.Right.size())
 		{
-			Result += "â€¢";
+			Result += "?";
 		}
 		return Result;
 	}
 
-	// è·å–é¡¹ç›®çš„å“ˆå¸Œå€¼
+	// »ñÈ¡ÏîÄ¿µÄ¹şÏ£Öµ
 	size_t Hash() const
 	{
 		size_t HashValue = hash<string>{}(ProductionRef.Left.Name);
@@ -149,7 +149,7 @@ struct LRItem
 	}
 };
 
-// å“ˆå¸Œå‡½æ•°ç‰¹åŒ–ï¼Œç”¨äºunordered_set
+// ¹şÏ£º¯ÊıÌØ»¯£¬ÓÃÓÚunordered_set
 namespace std
 {
 	template <>

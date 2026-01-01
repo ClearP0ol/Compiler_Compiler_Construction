@@ -13,27 +13,27 @@ struct FirstFollowCalculator
 	map<GrammarSymbol, set<GrammarSymbol>> FirstSets;
 	map<GrammarSymbol, set<GrammarSymbol>> FollowSets;
 
-	// ç‰¹æ®Šç¬¦å·ï¼šÎµï¼ˆç©ºä¸²ï¼‰å’Œ $ï¼ˆè¾“å…¥ç»“æŸç¬¦ï¼‰
+	// ÌØÊâ·ûºÅ£º¦Å£¨¿Õ´®£©ºÍ $£¨ÊäÈë½áÊø·û£©
 	GrammarSymbol EpsilonSymbol;
 	GrammarSymbol EndSymbol;
 
-	// æ„é€ å‡½æ•°
+	// ¹¹Ôìº¯Êı
 	FirstFollowCalculator(const GrammarDefinition &grammar)
 		: Grammar(grammar)
 	{
-		// åˆå§‹åŒ–ç‰¹æ®Šç¬¦å·
-		EpsilonSymbol = GrammarSymbol("Îµ", true);
+		// ³õÊ¼»¯ÌØÊâ·ûºÅ
+		EpsilonSymbol = GrammarSymbol("¦Å", true);
 		EndSymbol = GrammarSymbol("$", true);
 	}
 
-	// è®¡ç®—FIRSTé›†å’ŒFOLLOWé›†
+	// ¼ÆËãFIRST¼¯ºÍFOLLOW¼¯
 	void Calculate()
 	{
 		CalculateFirstSets();
 		CalculateFollowSets();
 	}
 
-	// è·å–FIRSTé›†
+	// »ñÈ¡FIRST¼¯
 	const set<GrammarSymbol> &GetFirstSet(const GrammarSymbol &symbol) const
 	{
 		static set<GrammarSymbol> EmptySet;
@@ -45,7 +45,7 @@ struct FirstFollowCalculator
 		return EmptySet;
 	}
 
-	// è·å–FOLLOWé›†
+	// »ñÈ¡FOLLOW¼¯
 	const set<GrammarSymbol> &GetFollowSet(const GrammarSymbol &symbol) const
 	{
 		static set<GrammarSymbol> EmptySet;
@@ -57,12 +57,12 @@ struct FirstFollowCalculator
 		return EmptySet;
 	}
 
-	// è·å–å­—ç¬¦ä¸²çš„FIRSTé›†ï¼ˆç”¨äºäº§ç”Ÿå¼å³éƒ¨ï¼‰
+	// »ñÈ¡×Ö·û´®µÄFIRST¼¯£¨ÓÃÓÚ²úÉúÊ½ÓÒ²¿£©
 	set<GrammarSymbol> GetFirstSetForSequence(const vector<GrammarSymbol> &sequence) const
 	{
 		set<GrammarSymbol> Result;
 
-		// å¦‚æœåºåˆ—ä¸ºç©ºï¼Œè¿”å›åŒ…å«Îµçš„é›†åˆ
+		// Èç¹ûĞòÁĞÎª¿Õ£¬·µ»Ø°üº¬¦ÅµÄ¼¯ºÏ
 		if (sequence.empty())
 		{
 			Result.insert(EpsilonSymbol);
@@ -71,25 +71,25 @@ struct FirstFollowCalculator
 
 		bool AllCanBeEpsilon = true;
 
-		// éå†æ¯ä¸ªç¬¦å·
+		// ±éÀúÃ¿¸ö·ûºÅ
 		for (const auto &Symbol : sequence)
 		{
 			const auto &FirstOfSymbol = GetFirstSet(Symbol);
 
-			// æ·»åŠ å½“å‰ç¬¦å·çš„FIRSTé›†ï¼ˆé™¤äº†Îµï¼‰
+			// Ìí¼Óµ±Ç°·ûºÅµÄFIRST¼¯£¨³ıÁË¦Å£©
 			for (const auto &FirstSym : FirstOfSymbol)
 			{
-				if (FirstSym.Name != "Îµ")
+				if (FirstSym.Name != "¦Å")
 				{
 					Result.insert(FirstSym);
 				}
 			}
 
-			// æ£€æŸ¥å½“å‰ç¬¦å·æ˜¯å¦èƒ½æ¨å‡ºÎµ
+			// ¼ì²éµ±Ç°·ûºÅÊÇ·ñÄÜÍÆ³ö¦Å
 			bool CanBeEpsilon = false;
 			for (const auto &FirstSym : FirstOfSymbol)
 			{
-				if (FirstSym.Name == "Îµ")
+				if (FirstSym.Name == "¦Å")
 				{
 					CanBeEpsilon = true;
 					break;
@@ -103,7 +103,7 @@ struct FirstFollowCalculator
 			}
 		}
 
-		// å¦‚æœæ‰€æœ‰ç¬¦å·éƒ½èƒ½æ¨å‡ºÎµï¼Œåˆ™æ·»åŠ Îµ
+		// Èç¹ûËùÓĞ·ûºÅ¶¼ÄÜÍÆ³ö¦Å£¬ÔòÌí¼Ó¦Å
 		if (AllCanBeEpsilon)
 		{
 			Result.insert(EpsilonSymbol);
@@ -112,12 +112,12 @@ struct FirstFollowCalculator
 		return Result;
 	}
 
-	// æ‰“å°FIRSTé›†
+	// ´òÓ¡FIRST¼¯
 	void PrintFirstSets() const
 	{
-		cout << "\nFIRST é›†åˆï¼š" << endl;
+		cout << "\nFIRST ¼¯ºÏ£º" << endl;
 
-		// æ‰“å°éç»ˆç»“ç¬¦
+		// ´òÓ¡·ÇÖÕ½á·û
 		for (const auto &NT : Grammar.NonTerminals)
 		{
 			cout << "FIRST(" << NT.Name << ") = { ";
@@ -136,7 +136,7 @@ struct FirstFollowCalculator
 			cout << " }" << endl;
 		}
 
-		// æ‰“å°ç»ˆç»“ç¬¦
+		// ´òÓ¡ÖÕ½á·û
 		for (const auto &T : Grammar.Terminals)
 		{
 			cout << "FIRST(" << T.Name << ") = { ";
@@ -156,10 +156,10 @@ struct FirstFollowCalculator
 		}
 	}
 
-	// æ‰“å°FOLLOWé›†
+	// ´òÓ¡FOLLOW¼¯
 	void PrintFollowSets() const
 	{
-		cout << "\nFOLLOW é›†åˆï¼š" << endl;
+		cout << "\nFOLLOW ¼¯ºÏ£º" << endl;
 
 		for (const auto &NT : Grammar.NonTerminals)
 		{
@@ -180,12 +180,12 @@ struct FirstFollowCalculator
 		}
 	}
 
-	// è®¡ç®—FIRSTé›†
+	// ¼ÆËãFIRST¼¯
 	void CalculateFirstSets()
 	{
 		bool Changed = true;
 
-		// æ‰€æœ‰ç»ˆç»“ç¬¦çš„FIRSTé›†å°±æ˜¯å®ƒè‡ªå·±
+		// ËùÓĞÖÕ½á·ûµÄFIRST¼¯¾ÍÊÇËü×Ô¼º
 		for (const auto &Terminal : Grammar.Terminals)
 		{
 			set<GrammarSymbol> FirstSet;
@@ -193,16 +193,16 @@ struct FirstFollowCalculator
 			FirstSets[Terminal] = FirstSet;
 		}
 
-		// æ‰€æœ‰éç»ˆç»“ç¬¦çš„FIRSTé›†ä¸ºç©º
+		// ËùÓĞ·ÇÖÕ½á·ûµÄFIRST¼¯Îª¿Õ
 		for (const auto &NonTerminal : Grammar.NonTerminals)
 		{
 			FirstSets[NonTerminal] = set<GrammarSymbol>();
 		}
 
-		// è¿­ä»£è®¡ç®—ç›´åˆ°ä¸å†å˜åŒ–
+		// µü´ú¼ÆËãÖ±µ½²»ÔÙ±ä»¯
 		while (Changed)
 		{
-			Changed = false; // æ¯æ¬¡å¾ªç¯å¼€å§‹æ—¶é‡ç½®ä¸ºfalse
+			Changed = false; // Ã¿´ÎÑ­»·¿ªÊ¼Ê±ÖØÖÃÎªfalse
 
 			for (const auto &Production : Grammar.Productions)
 			{
@@ -211,7 +211,7 @@ struct FirstFollowCalculator
 
 				set<GrammarSymbol> &FirstOfLeft = FirstSets[Left];
 
-				// å¦‚æœäº§ç”Ÿå¼å³éƒ¨ä¸ºç©ºï¼Œæ·»åŠ Îµ
+				// Èç¹û²úÉúÊ½ÓÒ²¿Îª¿Õ£¬Ìí¼Ó¦Å
 				if (Right.empty())
 				{
 					if (FirstOfLeft.insert(EpsilonSymbol).second)
@@ -221,16 +221,16 @@ struct FirstFollowCalculator
 					continue;
 				}
 
-				// éå†å³éƒ¨ç¬¦å·
+				// ±éÀúÓÒ²¿·ûºÅ
 				bool AllCanBeEpsilon = true;
 				for (const auto &Symbol : Right)
 				{
 					const set<GrammarSymbol> &FirstOfSymbol = FirstSets[Symbol];
 
-					// æ·»åŠ å½“å‰ç¬¦å·çš„FIRSTé›†ï¼ˆé™¤äº†Îµï¼‰åˆ°å·¦éƒ¨FIRSTé›†
+					// Ìí¼Óµ±Ç°·ûºÅµÄFIRST¼¯£¨³ıÁË¦Å£©µ½×ó²¿FIRST¼¯
 					for (const auto &FirstSym : FirstOfSymbol)
 					{
-						if (FirstSym.Name != "Îµ")
+						if (FirstSym.Name != "¦Å")
 						{
 							if (FirstOfLeft.insert(FirstSym).second)
 							{
@@ -239,19 +239,19 @@ struct FirstFollowCalculator
 						}
 					}
 
-					// æ£€æŸ¥å½“å‰ç¬¦å·æ˜¯å¦èƒ½æ¨å‡ºÎµ
+					// ¼ì²éµ±Ç°·ûºÅÊÇ·ñÄÜÍÆ³ö¦Å
 					bool CanBeEpsilon = false;
 					for (const auto &FirstSym : FirstOfSymbol)
 					{
-						// å¦‚æœèƒ½æ¨å‡º
-						if (FirstSym.Name == "Îµ")
+						// Èç¹ûÄÜÍÆ³ö
+						if (FirstSym.Name == "¦Å")
 						{
 							CanBeEpsilon = true;
 							break;
 						}
 					}
 
-					// å¦‚æœå³éƒ¨è‡³å°‘æœ‰ä¸€ä¸ªç¬¦å·çš„FIRSTé›†åˆä¸æ˜¯ç©º
+					// Èç¹ûÓÒ²¿ÖÁÉÙÓĞÒ»¸ö·ûºÅµÄFIRST¼¯ºÏ²»ÊÇ¿Õ
 					if (!CanBeEpsilon)
 					{
 						AllCanBeEpsilon = false;
@@ -259,7 +259,7 @@ struct FirstFollowCalculator
 					}
 				}
 
-				// å¦‚æœæ‰€æœ‰ç¬¦å·éƒ½èƒ½æ¨å‡ºÎµï¼Œæ·»åŠ Îµ
+				// Èç¹ûËùÓĞ·ûºÅ¶¼ÄÜÍÆ³ö¦Å£¬Ìí¼Ó¦Å
 				if (AllCanBeEpsilon)
 				{
 					if (FirstOfLeft.insert(EpsilonSymbol).second)
@@ -271,50 +271,50 @@ struct FirstFollowCalculator
 		}
 	}
 
-	// è®¡ç®—FOLLOWé›†
+	// ¼ÆËãFOLLOW¼¯
 	void CalculateFollowSets()
 	{
-		bool Changed = true; // åˆå§‹åŒ–ä¸ºtrue
+		bool Changed = true; // ³õÊ¼»¯Îªtrue
 
-		// åˆå§‹åŒ–æ‰€æœ‰éç»ˆç»“ç¬¦çš„FOLLOWé›†ä¸ºç©º
+		// ³õÊ¼»¯ËùÓĞ·ÇÖÕ½á·ûµÄFOLLOW¼¯Îª¿Õ
 		for (const auto &NonTerminal : Grammar.NonTerminals)
 		{
 			FollowSets[NonTerminal] = set<GrammarSymbol>();
 		}
 
-		// å¼€å§‹ç¬¦å·çš„FOLLOWé›†åŒ…å«$
+		// ¿ªÊ¼·ûºÅµÄFOLLOW¼¯°üº¬$
 		FollowSets[Grammar.StartSymbol].insert(EndSymbol);
 
-		// è¿­ä»£è®¡ç®—ç›´åˆ°ä¸å†å˜åŒ–
+		// µü´ú¼ÆËãÖ±µ½²»ÔÙ±ä»¯
 		while (Changed)
 		{
-			Changed = false; // æ¯æ¬¡å¾ªç¯å¼€å§‹æ—¶é‡ç½®ä¸ºfalse
+			Changed = false; // Ã¿´ÎÑ­»·¿ªÊ¼Ê±ÖØÖÃÎªfalse
 
 			for (const auto &Production : Grammar.Productions)
 			{
 				const GrammarSymbol &Left = Production.Left;
 				const vector<GrammarSymbol> &Right = Production.Right;
 
-				// éå†å³éƒ¨çš„æ¯ä¸ªéç»ˆç»“ç¬¦
+				// ±éÀúÓÒ²¿µÄÃ¿¸ö·ÇÖÕ½á·û
 				for (size_t I = 0; I < Right.size(); I++)
 				{
-					// å¦‚æœæ˜¯éç»ˆç»“ç¬¦
+					// Èç¹ûÊÇ·ÇÖÕ½á·û
 					if (!Right[I].IsTerminal)
 					{
 						set<GrammarSymbol> &FollowOfB = FollowSets[Right[I]];
 
-						// è‹¥Båé¢æœ‰ç¬¦å·ï¼šAâ†’Î±BÎ²
+						// ÈôBºóÃæÓĞ·ûºÅ£ºA¡ú¦ÁB¦Â
 						if (I + 1 < Right.size())
 						{
 
-							// è®¡ç®—åé¢ç¬¦å·ä¸²çš„FIRSTé›†
+							// ¼ÆËãºóÃæ·ûºÅ´®µÄFIRST¼¯
 							vector<GrammarSymbol> Beta(Right.begin() + I + 1, Right.end());
 							set<GrammarSymbol> FirstOfBeta = GetFirstSetForSequence(Beta);
 
-							// æ·»åŠ åˆ°FOLLOW(B)ä¸­ï¼ˆé™¤äº†Îµï¼‰
+							// Ìí¼Óµ½FOLLOW(B)ÖĞ£¨³ıÁË¦Å£©
 							for (const auto &Sym : FirstOfBeta)
 							{
-								if (Sym.Name != "Îµ")
+								if (Sym.Name != "¦Å")
 								{
 									if (FollowOfB.insert(Sym).second)
 									{
@@ -323,11 +323,11 @@ struct FirstFollowCalculator
 								}
 							}
 
-							// å¦‚æœÎ²èƒ½æ¨å‡ºÎµï¼Œæ·»åŠ FOLLOW(A)åˆ°FOLLOW(B)
+							// Èç¹û¦ÂÄÜÍÆ³ö¦Å£¬Ìí¼ÓFOLLOW(A)µ½FOLLOW(B)
 							bool BetaCanBeEpsilon = false;
 							for (const auto &Sym : FirstOfBeta)
 							{
-								if (Sym.Name == "Îµ")
+								if (Sym.Name == "¦Å")
 								{
 									BetaCanBeEpsilon = true;
 									break;
@@ -346,10 +346,10 @@ struct FirstFollowCalculator
 								}
 							}
 						}
-						// Bæ˜¯æœ€åä¸€ä¸ªç¬¦å·ï¼ŒAâ†’Î±B
+						// BÊÇ×îºóÒ»¸ö·ûºÅ£¬A¡ú¦ÁB
 						else
 						{
-							// æ·»åŠ FOLLOW(A)åˆ°FOLLOW(B)
+							// Ìí¼ÓFOLLOW(A)µ½FOLLOW(B)
 							const set<GrammarSymbol> &FollowOfA = FollowSets[Left];
 							for (const auto &Sym : FollowOfA)
 							{
