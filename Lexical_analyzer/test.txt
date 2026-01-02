@@ -3,7 +3,7 @@ read y;
 if ( x < y )
     write x;
 else
-    wwwr y;
+    write y;
 
 while ( x < 10 )
     x := x;
